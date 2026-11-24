@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { extractUsername } from '@/lib/utils';
 import { ShoppingBag, LogOut, ShieldCheck, Menu, X } from 'lucide-react';
 
 export default function Navbar() {
@@ -64,12 +65,12 @@ export default function Navbar() {
   };
 
   const isAdmin = profile?.role === 'admin' || user?.email?.toLowerCase().includes('maris');
+  const displayUsername = user ? extractUsername(user.user_metadata?.username || user.email) : '';
 
   return (
     <nav className="sticky top-0 z-50 bg-white text-zinc-900 border-b border-zinc-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          {/* Logo y Nombre */}
           <a href="/" className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-zinc-900 text-white flex items-center justify-center font-bold text-sm">
               MT
@@ -84,7 +85,6 @@ export default function Navbar() {
             </div>
           </a>
 
-          {/* Menú Desktop */}
           <div className="hidden md:flex items-center space-x-6 text-sm font-medium">
             <a
               href="/"
@@ -123,7 +123,6 @@ export default function Navbar() {
               </a>
             )}
 
-            {/* Estado de Usuario */}
             <div className="flex items-center space-x-3 pl-4 border-l border-zinc-200">
               {loading ? (
                 <div className="w-20 h-8 bg-zinc-100 animate-pulse rounded-lg" />
@@ -131,10 +130,10 @@ export default function Navbar() {
                 <div className="flex items-center space-x-3">
                   <div className="text-right hidden lg:block">
                     <p className="text-xs font-semibold text-zinc-900">
-                      {profile?.full_name || 'Usuario'}
+                      {profile?.full_name || displayUsername}
                     </p>
-                    <p className="text-[11px] text-zinc-500 truncate max-w-[140px]">
-                      {user.email}
+                    <p className="text-[11px] text-zinc-500 font-mono">
+                      @{displayUsername}
                     </p>
                   </div>
                   <button
@@ -158,7 +157,6 @@ export default function Navbar() {
             </div>
           </div>
 
-          {/* Botón Móvil */}
           <div className="flex md:hidden items-center space-x-2">
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -170,7 +168,6 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* Menú desplegable Móvil */}
       {mobileMenuOpen && (
         <div className="md:hidden bg-white border-b border-zinc-200 px-4 pt-2 pb-6 space-y-3">
           <a
@@ -208,9 +205,9 @@ export default function Navbar() {
               <div className="space-y-3">
                 <div className="px-3">
                   <p className="text-sm font-semibold text-zinc-900">
-                    {profile?.full_name || 'Usuario'}
+                    {profile?.full_name || displayUsername}
                   </p>
-                  <p className="text-xs text-zinc-500">{user.email}</p>
+                  <p className="text-xs text-zinc-500 font-mono">@{displayUsername}</p>
                 </div>
                 <button
                   onClick={() => {

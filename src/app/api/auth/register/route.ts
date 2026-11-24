@@ -1,74 +1,80 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
+import { usernameToInternalEmail } from '@/lib/utils';
 
-// POST /api/auth/register - Registro público de clientes
+// POST /api/auth/register - Registro público por NOMBRE DE USUARIO (sin emails ni spam)
 export async function POST(req: NextRequest) {
   try {
-    const supabaseUrl =
-      process.env.NEXT_PUBLIC_SUPABASE_URL ||
-      process.env.SUPABASE_URL;
-
-    const supabaseAnonKey =
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-      process.env.SUPABASE_ANON_KEY;
-
-    if (!supabaseUrl || !supabaseAnonKey || supabaseUrl.includes('placeholder')) {
-      return NextResponse.json(
-        {
-          error:
-            'Aún no están configuradas las variables de entorno de Supabase en Vercel.',
-        },
-        { status: 500 }
-      );
-    }
-
+    const adminClient = createAdminClient();
     const body = await req.json();
-    let { email, password, full_name, phone, address } = body;
+    let { username, password, full_name, phone, address } = body;
 
-    if (!email || !password || !full_name) {
+    if (!username || !username.trim()) {
       return NextResponse.json(
-        { error: 'Email, contraseña y nombre completo son obligatorios' },
+        { error: 'El nombre de usuario es obligatorio' },
         { status: 400 }
       );
     }
 
-    const cleanEmail = email.trim().toLowerCase();
-
-    if (password.length < 6) {
+    if (!password || password.length < 6) {
       return NextResponse.json(
         { error: 'La contraseña debe tener al menos 6 caracteres' },
         { status: 400 }
       );
     }
 
-    const supabase = await createClient();
+    const cleanUsername = username
+      .trim()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9._-]/g, '');
 
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email: cleanEmail,
+    if (cleanUsername.length < 3) {
+      return NextResponse.json(
+        { error: 'El usuario debe tener al menos 3 caracteres (letras, números o guiones)' },
+        { status: 400 }
+      );
+    }
+
+    const internalEmail = usernameToInternalEmail(cleanUsername);
+
+    // Creamos el usuario automáticamente confirmado en Supabase Auth mediante Admin Client
+    // Esto garantiza 0 envío de correos, 0 spam y 0 rate limits.
+    const { data: authData, error: authError } = await adminClient.auth.admin.createUser({
+      email: internalEmail,
       password,
-      options: {
-        data: {
-          app: 'mujeres_del_tango',
-          full_name,
-          phone: phone || '',
-          address: address || '',
-          must_change_password: false,
-          role: 'user',
-        },
+      email_confirm: true,
+      user_metadata: {
+        app: 'mujeres_del_tango',
+        username: cleanUsername,
+        full_name: full_name?.trim() || cleanUsername,
+        phone: phone || '',
+        address: address || '',
+        must_change_password: false,
+        role: 'user',
       },
     });
 
     if (authError) {
+      if (authError.message.includes('already been registered') || authError.message.includes('unique')) {
+        return NextResponse.json(
+          { error: `El usuario "${cleanUsername}" ya existe. Por favor elegí otro nombre de usuario.` },
+          { status: 400 }
+        );
+      }
       return NextResponse.json({ error: authError.message }, { status: 400 });
     }
 
     return NextResponse.json({
       success: true,
+      username: cleanUsername,
+      internalEmail,
       user: authData.user,
     });
   } catch (error: any) {
     return NextResponse.json(
-      { error: error.message || 'Error al conectar con el servidor de autenticación' },
+      { error: error.message || 'Error al registrar usuario' },
       { status: 500 }
     );
   }

@@ -14,19 +14,45 @@ export function formatCurrency(amount: number): string {
 }
 
 /**
+ * Convierte un nombre de usuario a un email interno para Supabase Auth sin requerir envío de correos.
+ * Ej: "maris" -> "maris@mujeresdeltango.com"
+ */
+export function usernameToInternalEmail(username: string): string {
+  if (!username) return '';
+  // Si ya es un email que alguien escribió, limpiarlo a formato estándar
+  if (username.includes('@')) {
+    username = username.split('@')[0];
+  }
+
+  const clean = username
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9._-]/g, '.');
+
+  return `${clean}@mujeresdeltango.com`;
+}
+
+/**
+ * Extrae el nombre de usuario limpio a partir del email interno.
+ */
+export function extractUsername(emailOrUser?: string | null): string {
+  if (!emailOrUser) return '';
+  return emailOrUser.replace('@mujeresdeltango.com', '');
+}
+
+/**
  * Sanitiza números de teléfono para generar URLs directas de WhatsApp
- * Ej: 11 2345 6789 -> 5491123456789
  */
 export function sanitizeWhatsAppPhone(phone: string): string {
   if (!phone) return '';
   let clean = phone.replace(/\D/g, '');
 
-  // Si arranca con 15 (típico de celulares en Argentina), remover el 15
   if (clean.startsWith('15') && clean.length === 10) {
     clean = clean.substring(2);
   }
 
-  // Si no tiene código de país, agregar prefijo argentino 549
   if (!clean.startsWith('54')) {
     if (clean.startsWith('9')) {
       clean = '54' + clean;
@@ -34,7 +60,6 @@ export function sanitizeWhatsAppPhone(phone: string): string {
       clean = '549' + clean;
     }
   } else if (clean.startsWith('54') && !clean.startsWith('549')) {
-    // Si tiene 54 pero le falta el 9 para celulares
     clean = '549' + clean.substring(2);
   }
 

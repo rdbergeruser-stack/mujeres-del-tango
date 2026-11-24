@@ -66,7 +66,7 @@ export default function AdminPage() {
 
   // Formulario Cliente Asistido por Maris
   const [clientFullName, setClientFullName] = useState('');
-  const [clientEmail, setClientEmail] = useState('');
+  const [clientUsername, setClientUsername] = useState('');
   const [clientPhone, setClientPhone] = useState('');
   const [clientAddress, setClientAddress] = useState('');
   const [clientTempPass, setClientTempPass] = useState('123456');
@@ -323,7 +323,7 @@ export default function AdminPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           full_name: clientFullName,
-          email: clientEmail,
+          username: clientUsername,
           phone: clientPhone,
           address: clientAddress,
           temp_password: clientTempPass,
@@ -335,7 +335,7 @@ export default function AdminPage() {
 
       setCreatedClientResult(data);
       setClientFullName('');
-      setClientEmail('');
+      setClientUsername('');
       setClientPhone('');
       setClientAddress('');
       await loadData();
@@ -940,7 +940,7 @@ export default function AdminPage() {
 
               {createdClientResult && (
                 <div className="mb-4 p-3 rounded-lg bg-zinc-100 border border-zinc-200 text-xs text-zinc-800 space-y-2">
-                  <p><strong>Cuenta creada:</strong> {createdClientResult.user?.email}</p>
+                  <p><strong>Usuario creado:</strong> {createdClientResult.user?.username}</p>
                   <p><strong>Clave provisoria:</strong> {createdClientResult.tempPassword}</p>
                   {createdClientResult.whatsAppLink && (
                     <a
@@ -970,6 +970,17 @@ export default function AdminPage() {
                 </div>
 
                 <div>
+                  <label className="block text-xs font-semibold text-zinc-700 mb-1">Usuario (opcional, se autogenera):</label>
+                  <input
+                    type="text"
+                    placeholder="laura o laura.martinez"
+                    value={clientUsername}
+                    onChange={(e) => setClientUsername(e.target.value)}
+                    className="w-full p-2 rounded-lg border border-zinc-300 text-xs text-zinc-900"
+                  />
+                </div>
+
+                <div>
                   <label className="block text-xs font-semibold text-zinc-700 mb-1">WhatsApp / Tel:</label>
                   <input
                     type="tel"
@@ -977,17 +988,6 @@ export default function AdminPage() {
                     placeholder="11 4050 6070"
                     value={clientPhone}
                     onChange={(e) => setClientPhone(e.target.value)}
-                    className="w-full p-2 rounded-lg border border-zinc-300 text-xs text-zinc-900"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-zinc-700 mb-1">Email (opcional):</label>
-                  <input
-                    type="email"
-                    placeholder="laura@correo.com"
-                    value={clientEmail}
-                    onChange={(e) => setClientEmail(e.target.value)}
                     className="w-full p-2 rounded-lg border border-zinc-300 text-xs text-zinc-900"
                   />
                 </div>
@@ -1036,7 +1036,7 @@ export default function AdminPage() {
                   <thead className="bg-zinc-50 text-[11px] uppercase font-bold text-zinc-500 border-b border-zinc-200">
                     <tr>
                       <th className="py-2.5 px-3">Nombre</th>
-                      <th className="py-2.5 px-3">Email</th>
+                      <th className="py-2.5 px-3">Usuario</th>
                       <th className="py-2.5 px-3">WhatsApp</th>
                       <th className="py-2.5 px-3">Rol</th>
                       <th className="py-2.5 px-3 text-right">Acciones</th>
@@ -1053,7 +1053,7 @@ export default function AdminPage() {
                       .map((c) => (
                         <tr key={c.id} className="hover:bg-zinc-50">
                           <td className="py-2.5 px-3 font-semibold text-zinc-900">{c.full_name || 'Sin nombre'}</td>
-                          <td className="py-2.5 px-3">{c.email}</td>
+                          <td className="py-2.5 px-3 font-mono text-zinc-600">@{c.email.replace('@mujeresdeltango.com', '')}</td>
                           <td className="py-2.5 px-3 font-mono">{c.phone || '-'}</td>
                           <td className="py-2.5 px-3">
                             <span className="px-1.5 py-0.5 rounded text-[10px] bg-zinc-100 font-medium">

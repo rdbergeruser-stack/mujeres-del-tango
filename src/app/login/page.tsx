@@ -3,6 +3,7 @@
 import React, { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { usernameToInternalEmail } from '@/lib/utils';
 import { LogIn, UserPlus, AlertCircle } from 'lucide-react';
 
 function LoginForm() {
@@ -16,13 +17,13 @@ function LoginForm() {
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Campos Login
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  // Campos Login (Usuario y Contraseña)
+  const [loginUser, setLoginUser] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
 
-  // Campos Registro
+  // Campos Registro (Usuario, Nombre, WhatsApp, Dirección y Contraseña)
   const [regFullName, setRegFullName] = useState('');
-  const [regEmail, setRegEmail] = useState('');
+  const [regUsername, setRegUsername] = useState('');
   const [regPassword, setRegPassword] = useState('');
   const [regPhone, setRegPhone] = useState('');
   const [regAddress, setRegAddress] = useState('');
@@ -33,12 +34,20 @@ function LoginForm() {
     setLoading(true);
 
     try {
+      const cleanUser = loginUser.trim().toLowerCase();
+      const internalEmail = usernameToInternalEmail(cleanUser);
+
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
-        password,
+        email: internalEmail,
+        password: loginPassword,
       });
 
-      if (error) throw error;
+      if (error) {
+        if (error.message.includes('Invalid login credentials')) {
+          throw new Error('Usuario o contraseña incorrectos.');
+        }
+        throw error;
+      }
 
       if (data.user) {
         const { data: profile } = await supabase
@@ -60,7 +69,7 @@ function LoginForm() {
         router.refresh();
       }
     } catch (err: any) {
-      setErrorMessage(err.message || 'Error al iniciar sesión. Verificá tus credenciales.');
+      setErrorMessage(err.message || 'Error al iniciar sesión.');
     } finally {
       setLoading(false);
     }
@@ -72,14 +81,14 @@ function LoginForm() {
     setLoading(true);
 
     try {
-      const cleanEmail = regEmail.trim().toLowerCase();
+      const cleanUser = regUsername.trim().toLowerCase().replace(/[^a-z0-9._-]/g, '');
 
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           full_name: regFullName,
-          email: cleanEmail,
+          username: cleanUser,
           password: regPassword,
           phone: regPhone,
           address: regAddress,
@@ -89,14 +98,17 @@ function LoginForm() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Error al crear la cuenta');
 
+      // Inicio de sesión directo con el email interno
+      const internalEmail = usernameToInternalEmail(cleanUser);
       const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: cleanEmail,
+        email: internalEmail,
         password: regPassword,
       });
 
       if (signInError) {
-        alert('Cuenta creada exitosamente. Por favor iniciá sesión.');
+        alert('Cuenta creada exitosamente. Por favor iniciá sesión con tu usuario y contraseña.');
         setActiveTab('login');
+        setLoginUser(cleanUser);
       } else {
         router.push(redirectPath);
         router.refresh();
@@ -115,7 +127,7 @@ function LoginForm() {
           Mujeres del Tango
         </h2>
         <p className="text-xs text-zinc-400 mt-1">
-          Acceso a la Tienda
+          Ingreso a la Tienda
         </p>
       </div>
 
@@ -160,14 +172,16 @@ function LoginForm() {
           <form onSubmit={handleLogin} className="space-y-3.5">
             <div>
               <label className="block text-xs font-semibold text-zinc-700 mb-1">
-                Correo Electrónico
+                Usuario
               </label>
               <input
-                type="email"
+                type="text"
                 required
-                placeholder="ejemplo@correo.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                autoCapitalize="none"
+                autoCorrect="off"
+                placeholder="ej: maris o tu_usuario"
+                value={loginUser}
+                onChange={(e) => setLoginUser(e.target.value)}
                 className="w-full p-2.5 rounded-lg border border-zinc-300 text-sm text-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900"
               />
             </div>
@@ -180,8 +194,8 @@ function LoginForm() {
                 type="password"
                 required
                 placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                value={loginPassword}
+                onChange={(e) => setLoginPassword(e.target.value)}
                 className="w-full p-2.5 rounded-lg border border-zinc-300 text-sm text-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900"
               />
             </div>
@@ -212,7 +226,7 @@ function LoginForm() {
               <input
                 type="text"
                 required
-                placeholder="Tu nombre y apellido"
+                placeholder="Ej: Maris o Laura Martínez"
                 value={regFullName}
                 onChange={(e) => setRegFullName(e.target.value)}
                 className="w-full p-2 rounded-lg border border-zinc-300 text-sm text-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900"
@@ -221,16 +235,21 @@ function LoginForm() {
 
             <div>
               <label className="block text-xs font-semibold text-zinc-700 mb-1">
-                Correo Electrónico <span className="text-red-500">*</span>
+                Nombre de Usuario <span className="text-red-500">*</span>
               </label>
               <input
-                type="email"
+                type="text"
                 required
-                placeholder="tu@correo.com"
-                value={regEmail}
-                onChange={(e) => setRegEmail(e.target.value)}
+                autoCapitalize="none"
+                autoCorrect="off"
+                placeholder="ej: maris o laura"
+                value={regUsername}
+                onChange={(e) => setRegUsername(e.target.value)}
                 className="w-full p-2 rounded-lg border border-zinc-300 text-sm text-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900"
               />
+              <span className="text-[10px] text-zinc-400">
+                Será tu nombre para ingresar al sitio (sin correos ni confirmaciones).
+              </span>
             </div>
 
             <div>
