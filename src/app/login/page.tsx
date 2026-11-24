@@ -72,12 +72,14 @@ function LoginForm() {
     setLoading(true);
 
     try {
+      const cleanEmail = regEmail.trim().toLowerCase();
+
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           full_name: regFullName,
-          email: regEmail,
+          email: cleanEmail,
           password: regPassword,
           phone: regPhone,
           address: regAddress,
@@ -88,7 +90,7 @@ function LoginForm() {
       if (!res.ok) throw new Error(data.error || 'Error al crear la cuenta');
 
       const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: regEmail.trim(),
+        email: cleanEmail,
         password: regPassword,
       });
 

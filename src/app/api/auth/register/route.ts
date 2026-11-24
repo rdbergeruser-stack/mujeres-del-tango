@@ -16,14 +16,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           error:
-            'Aún no están configuradas las variables de entorno de Supabase en Vercel. Agregá NEXT_PUBLIC_SUPABASE_URL y NEXT_PUBLIC_SUPABASE_ANON_KEY en Vercel -> Settings -> Environment Variables y hacé Redeploy.',
+            'Aún no están configuradas las variables de entorno de Supabase en Vercel.',
         },
         { status: 500 }
       );
     }
 
     const body = await req.json();
-    const { email, password, full_name, phone, address } = body;
+    let { email, password, full_name, phone, address } = body;
 
     if (!email || !password || !full_name) {
       return NextResponse.json(
@@ -31,6 +31,8 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
+
+    const cleanEmail = email.trim().toLowerCase();
 
     if (password.length < 6) {
       return NextResponse.json(
@@ -42,7 +44,7 @@ export async function POST(req: NextRequest) {
     const supabase = await createClient();
 
     const { data: authData, error: authError } = await supabase.auth.signUp({
-      email,
+      email: cleanEmail,
       password,
       options: {
         data: {
