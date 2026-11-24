@@ -37,10 +37,10 @@ export async function middleware(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname;
 
-  // Si el usuario está autenticado, verificamos su perfil
+  // Si el usuario está autenticado, verificamos su perfil en tango_profiles
   if (user) {
     const { data: profile } = await supabase
-      .from('profiles')
+      .from('tango_profiles')
       .select('role, must_change_password')
       .eq('id', user.id)
       .single();

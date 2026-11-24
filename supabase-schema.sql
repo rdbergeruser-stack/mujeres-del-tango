@@ -1,12 +1,13 @@
 -- ==============================================================================
--- 🌹 MUJERES DEL TANGO - ESQUEMA DE BASE DE DATOS (SUPABASE POSTGRESQL + RLS)
+-- 🌹 MUJERES DEL TANGO - ESQUEMA DE BASE DE DATOS ADAPTADO (PREFIJO tango_)
+-- Totalmente compatible para convivir en un proyecto de Supabase ya existente.
 -- ==============================================================================
 
 -- 1. EXTENSIONES
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- 2. TABLA PROFILES
-CREATE TABLE IF NOT EXISTS public.profiles (
+-- 2. TABLA tango_profiles
+CREATE TABLE IF NOT EXISTS public.tango_profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   email TEXT NOT NULL,
   full_name TEXT,
@@ -17,72 +18,77 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- FUNCIÓN HELPER: is_admin()
-CREATE OR REPLACE FUNCTION public.is_admin()
+-- FUNCIÓN HELPER: tango_is_admin()
+CREATE OR REPLACE FUNCTION public.tango_is_admin()
 RETURNS BOOLEAN AS $$
 BEGIN
   RETURN EXISTS (
-    SELECT 1 FROM public.profiles
+    SELECT 1 FROM public.tango_profiles
     WHERE id = auth.uid() AND role = 'admin'
   );
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- TRIGGER: handle_new_user()
-CREATE OR REPLACE FUNCTION public.handle_new_user()
+-- TRIGGER: tango_handle_new_user()
+CREATE OR REPLACE FUNCTION public.tango_handle_new_user()
 RETURNS TRIGGER AS $$
 DECLARE
   is_first_user BOOLEAN;
   is_maris BOOLEAN;
+  is_tango_app BOOLEAN;
   assigned_role TEXT;
   assigned_name TEXT;
 BEGIN
-  SELECT (COUNT(*) = 0) INTO is_first_user FROM public.profiles;
+  SELECT (COUNT(*) = 0) INTO is_first_user FROM public.tango_profiles;
   is_maris := (LOWER(NEW.email) LIKE '%maris%');
+  is_tango_app := (COALESCE(NEW.raw_user_meta_data->>'app', '') = 'mujeres_del_tango');
 
-  IF is_first_user OR is_maris THEN
-    assigned_role := 'admin';
-    assigned_name := COALESCE(NEW.raw_user_meta_data->>'full_name', 'Maris');
-  ELSE
-    assigned_role := COALESCE(NEW.raw_user_meta_data->>'role', 'user');
-    assigned_name := COALESCE(NEW.raw_user_meta_data->>'full_name', split_part(NEW.email, '@', 1));
+  -- Solo registrar en tango_profiles si es de esta app, contiene "maris" o es la primera cuenta
+  IF is_first_user OR is_maris OR is_tango_app THEN
+    IF is_first_user OR is_maris THEN
+      assigned_role := 'admin';
+      assigned_name := COALESCE(NEW.raw_user_meta_data->>'full_name', 'Maris');
+    ELSE
+      assigned_role := COALESCE(NEW.raw_user_meta_data->>'role', 'user');
+      assigned_name := COALESCE(NEW.raw_user_meta_data->>'full_name', split_part(NEW.email, '@', 1));
+    END IF;
+
+    INSERT INTO public.tango_profiles (
+      id,
+      email,
+      full_name,
+      phone,
+      address,
+      role,
+      must_change_password
+    ) VALUES (
+      NEW.id,
+      NEW.email,
+      assigned_name,
+      COALESCE(NEW.raw_user_meta_data->>'phone', ''),
+      COALESCE(NEW.raw_user_meta_data->>'address', ''),
+      assigned_role,
+      COALESCE((NEW.raw_user_meta_data->>'must_change_password')::BOOLEAN, false)
+    )
+    ON CONFLICT (id) DO UPDATE SET
+      email = EXCLUDED.email,
+      full_name = COALESCE(EXCLUDED.full_name, public.tango_profiles.full_name),
+      phone = COALESCE(EXCLUDED.phone, public.tango_profiles.phone),
+      address = COALESCE(EXCLUDED.address, public.tango_profiles.address);
   END IF;
-
-  INSERT INTO public.profiles (
-    id,
-    email,
-    full_name,
-    phone,
-    address,
-    role,
-    must_change_password
-  ) VALUES (
-    NEW.id,
-    NEW.email,
-    assigned_name,
-    COALESCE(NEW.raw_user_meta_data->>'phone', ''),
-    COALESCE(NEW.raw_user_meta_data->>'address', ''),
-    assigned_role,
-    COALESCE((NEW.raw_user_meta_data->>'must_change_password')::BOOLEAN, false)
-  )
-  ON CONFLICT (id) DO UPDATE SET
-    email = EXCLUDED.email,
-    full_name = COALESCE(EXCLUDED.full_name, public.profiles.full_name),
-    phone = COALESCE(EXCLUDED.phone, public.profiles.phone),
-    address = COALESCE(EXCLUDED.address, public.profiles.address);
 
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
-DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
-CREATE TRIGGER on_auth_user_created
+DROP TRIGGER IF EXISTS on_auth_user_created_tango ON auth.users;
+CREATE TRIGGER on_auth_user_created_tango
   AFTER INSERT ON auth.users
-  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+  FOR EACH ROW EXECUTE FUNCTION public.tango_handle_new_user();
 
 
--- 3. TABLA COLLECTIONS (COLECCIONES / HOMENAJES A GRANDES MUJERES DEL TANGO)
-CREATE TABLE IF NOT EXISTS public.collections (
+-- 3. TABLA tango_collections (COLECCIONES / HOMENAJES A GRANDES MUJERES DEL TANGO)
+CREATE TABLE IF NOT EXISTS public.tango_collections (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT UNIQUE NOT NULL,
   bio TEXT,
@@ -92,14 +98,14 @@ CREATE TABLE IF NOT EXISTS public.collections (
 );
 
 
--- 4. TABLA REMERAS (CATÁLOGO DE PRODUCTOS)
-CREATE TABLE IF NOT EXISTS public.remeras (
+-- 4. TABLA tango_remeras (CATÁLOGO DE PRODUCTOS)
+CREATE TABLE IF NOT EXISTS public.tango_remeras (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   title TEXT NOT NULL,
   description TEXT,
   price NUMERIC(10,2) NOT NULL DEFAULT 0.00,
   category TEXT NOT NULL DEFAULT 'Corte Clásico',
-  collection_name TEXT REFERENCES public.collections(name) ON UPDATE CASCADE ON DELETE SET NULL,
+  collection_name TEXT REFERENCES public.tango_collections(name) ON UPDATE CASCADE ON DELETE SET NULL,
   sizes TEXT[] NOT NULL DEFAULT ARRAY['S', 'M', 'L', 'XL', 'XXL']::TEXT[],
   colors TEXT[] NOT NULL DEFAULT ARRAY['Negro', 'Blanco Crudo', 'Bordó']::TEXT[],
   stock INTEGER NOT NULL DEFAULT 10,
@@ -110,11 +116,11 @@ CREATE TABLE IF NOT EXISTS public.remeras (
 );
 
 
--- 5. TABLA ORDERS (PEDIDOS Y VENTAS)
-CREATE TABLE IF NOT EXISTS public.orders (
+-- 5. TABLA tango_orders (PEDIDOS Y VENTAS)
+CREATE TABLE IF NOT EXISTS public.tango_orders (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
-  remera_id UUID NOT NULL REFERENCES public.remeras(id) ON DELETE RESTRICT,
+  user_id UUID NOT NULL REFERENCES public.tango_profiles(id) ON DELETE CASCADE,
+  remera_id UUID NOT NULL REFERENCES public.tango_remeras(id) ON DELETE RESTRICT,
   selected_size TEXT NOT NULL,
   selected_color TEXT,
   quantity INTEGER NOT NULL DEFAULT 1 CHECK (quantity > 0),
@@ -128,11 +134,11 @@ CREATE TABLE IF NOT EXISTS public.orders (
 );
 
 
--- 6. TABLA PAYMENT_NOTIFICATIONS (AVISOS DE TRANSFERENCIA)
-CREATE TABLE IF NOT EXISTS public.payment_notifications (
+-- 6. TABLA tango_payment_notifications (AVISOS DE TRANSFERENCIA)
+CREATE TABLE IF NOT EXISTS public.tango_payment_notifications (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  order_id UUID NOT NULL REFERENCES public.orders(id) ON DELETE CASCADE,
-  user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  order_id UUID NOT NULL REFERENCES public.tango_orders(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES public.tango_profiles(id) ON DELETE CASCADE,
   reference_code TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -140,115 +146,133 @@ CREATE TABLE IF NOT EXISTS public.payment_notifications (
 
 
 -- 7. SEGURIDAD: ROW LEVEL SECURITY (RLS)
-ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.collections ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.remeras ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.payment_notifications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.tango_profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.tango_collections ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.tango_remeras ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.tango_orders ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.tango_payment_notifications ENABLE ROW LEVEL SECURITY;
 
--- POLÍTICAS PROFILES
-CREATE POLICY "Profiles: usuarios leen su perfil"
-  ON public.profiles FOR SELECT
-  USING (auth.uid() = id OR public.is_admin());
+-- POLÍTICAS tango_profiles
+DROP POLICY IF EXISTS "Tango_profiles: usuarios leen su perfil" ON public.tango_profiles;
+CREATE POLICY "Tango_profiles: usuarios leen su perfil"
+  ON public.tango_profiles FOR SELECT
+  USING (auth.uid() = id OR public.tango_is_admin());
 
-CREATE POLICY "Profiles: usuarios editan su propio perfil"
-  ON public.profiles FOR UPDATE
-  USING (auth.uid() = id OR public.is_admin())
-  WITH CHECK (auth.uid() = id OR public.is_admin());
+DROP POLICY IF EXISTS "Tango_profiles: usuarios editan su propio perfil" ON public.tango_profiles;
+CREATE POLICY "Tango_profiles: usuarios editan su propio perfil"
+  ON public.tango_profiles FOR UPDATE
+  USING (auth.uid() = id OR public.tango_is_admin())
+  WITH CHECK (auth.uid() = id OR public.tango_is_admin());
 
-CREATE POLICY "Profiles: admin inserta y borra"
-  ON public.profiles FOR ALL
-  USING (public.is_admin());
+DROP POLICY IF EXISTS "Tango_profiles: admin inserta y borra" ON public.tango_profiles;
+CREATE POLICY "Tango_profiles: admin inserta y borra"
+  ON public.tango_profiles FOR ALL
+  USING (public.tango_is_admin());
 
--- POLÍTICAS COLLECTIONS
-CREATE POLICY "Collections: lectura pública"
-  ON public.collections FOR SELECT
+-- POLÍTICAS tango_collections
+DROP POLICY IF EXISTS "Tango_collections: lectura pública" ON public.tango_collections;
+CREATE POLICY "Tango_collections: lectura pública"
+  ON public.tango_collections FOR SELECT
   TO public
   USING (true);
 
-CREATE POLICY "Collections: admin gestiona todo"
-  ON public.collections FOR ALL
-  USING (public.is_admin());
+DROP POLICY IF EXISTS "Tango_collections: admin gestiona todo" ON public.tango_collections;
+CREATE POLICY "Tango_collections: admin gestiona todo"
+  ON public.tango_collections FOR ALL
+  USING (public.tango_is_admin());
 
--- POLÍTICAS REMERAS
-CREATE POLICY "Remeras: lectura pública de activas o admin todo"
-  ON public.remeras FOR SELECT
+-- POLÍTICAS tango_remeras
+DROP POLICY IF EXISTS "Tango_remeras: lectura pública de activas o admin todo" ON public.tango_remeras;
+CREATE POLICY "Tango_remeras: lectura pública de activas o admin todo"
+  ON public.tango_remeras FOR SELECT
   TO public
-  USING (is_active = true OR public.is_admin());
+  USING (is_active = true OR public.tango_is_admin());
 
-CREATE POLICY "Remeras: admin gestiona todo"
-  ON public.remeras FOR ALL
-  USING (public.is_admin());
+DROP POLICY IF EXISTS "Tango_remeras: admin gestiona todo" ON public.tango_remeras;
+CREATE POLICY "Tango_remeras: admin gestiona todo"
+  ON public.tango_remeras FOR ALL
+  USING (public.tango_is_admin());
 
--- POLÍTICAS ORDERS
-CREATE POLICY "Orders: usuarios ven sus propios pedidos o admin ve todos"
-  ON public.orders FOR SELECT
+-- POLÍTICAS tango_orders
+DROP POLICY IF EXISTS "Tango_orders: usuarios ven sus propios pedidos o admin ve todos" ON public.tango_orders;
+CREATE POLICY "Tango_orders: usuarios ven sus propios pedidos o admin ve todos"
+  ON public.tango_orders FOR SELECT
   TO authenticated
-  USING (auth.uid() = user_id OR public.is_admin());
+  USING (auth.uid() = user_id OR public.tango_is_admin());
 
-CREATE POLICY "Orders: usuarios crean sus propios pedidos"
-  ON public.orders FOR INSERT
-  TO authenticated
-  WITH CHECK (auth.uid() = user_id);
-
-CREATE POLICY "Orders: admin modifica pedidos (aprobar/entregar/rechazar)"
-  ON public.orders FOR UPDATE
-  TO authenticated
-  USING (public.is_admin())
-  WITH CHECK (public.is_admin());
-
-CREATE POLICY "Orders: admin elimina pedidos"
-  ON public.orders FOR DELETE
-  TO authenticated
-  USING (public.is_admin());
-
--- POLÍTICAS PAYMENT_NOTIFICATIONS
-CREATE POLICY "Payment_notifications: usuarios ven sus propios avisos o admin todos"
-  ON public.payment_notifications FOR SELECT
-  TO authenticated
-  USING (auth.uid() = user_id OR public.is_admin());
-
-CREATE POLICY "Payment_notifications: usuarios crean avisos para sus pedidos"
-  ON public.payment_notifications FOR INSERT
+DROP POLICY IF EXISTS "Tango_orders: usuarios crean sus propios pedidos" ON public.tango_orders;
+CREATE POLICY "Tango_orders: usuarios crean sus propios pedidos"
+  ON public.tango_orders FOR INSERT
   TO authenticated
   WITH CHECK (auth.uid() = user_id);
 
-CREATE POLICY "Payment_notifications: admin actualiza estado de avisos"
-  ON public.payment_notifications FOR UPDATE
+DROP POLICY IF EXISTS "Tango_orders: admin modifica pedidos (aprobar/entregar/rechazar)" ON public.tango_orders;
+CREATE POLICY "Tango_orders: admin modifica pedidos (aprobar/entregar/rechazar)"
+  ON public.tango_orders FOR UPDATE
   TO authenticated
-  USING (public.is_admin())
-  WITH CHECK (public.is_admin());
+  USING (public.tango_is_admin())
+  WITH CHECK (public.tango_is_admin());
+
+DROP POLICY IF EXISTS "Tango_orders: admin elimina pedidos" ON public.tango_orders;
+CREATE POLICY "Tango_orders: admin elimina pedidos"
+  ON public.tango_orders FOR DELETE
+  TO authenticated
+  USING (public.tango_is_admin());
+
+-- POLÍTICAS tango_payment_notifications
+DROP POLICY IF EXISTS "Tango_payment_notifications: usuarios ven sus propios avisos o admin todos" ON public.tango_payment_notifications;
+CREATE POLICY "Tango_payment_notifications: usuarios ven sus propios avisos o admin todos"
+  ON public.tango_payment_notifications FOR SELECT
+  TO authenticated
+  USING (auth.uid() = user_id OR public.tango_is_admin());
+
+DROP POLICY IF EXISTS "Tango_payment_notifications: usuarios crean avisos para sus pedidos" ON public.tango_payment_notifications;
+CREATE POLICY "Tango_payment_notifications: usuarios crean avisos para sus pedidos"
+  ON public.tango_payment_notifications FOR INSERT
+  TO authenticated
+  WITH CHECK (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Tango_payment_notifications: admin actualiza estado de avisos" ON public.tango_payment_notifications;
+CREATE POLICY "Tango_payment_notifications: admin actualiza estado de avisos"
+  ON public.tango_payment_notifications FOR UPDATE
+  TO authenticated
+  USING (public.tango_is_admin())
+  WITH CHECK (public.tango_is_admin());
 
 
--- 8. CONFIGURACIÓN DEL STORAGE BUCKET: remeras-images
+-- 8. CONFIGURACIÓN DEL STORAGE BUCKET: tango-remeras-images
 INSERT INTO storage.buckets (id, name, public)
-VALUES ('remeras-images', 'remeras-images', true)
+VALUES ('tango-remeras-images', 'tango-remeras-images', true)
 ON CONFLICT (id) DO NOTHING;
 
--- Políticas de Storage
-CREATE POLICY "Storage: lectura pública de imágenes de remeras"
+-- Políticas de Storage aisladas
+DROP POLICY IF EXISTS "Storage: lectura pública de imágenes de remeras tango" ON storage.objects;
+CREATE POLICY "Storage: lectura pública de imágenes de remeras tango"
   ON storage.objects FOR SELECT
   TO public
-  USING (bucket_id = 'remeras-images');
+  USING (bucket_id = 'tango-remeras-images');
 
-CREATE POLICY "Storage: administradores pueden subir imágenes"
+DROP POLICY IF EXISTS "Storage: administradores pueden subir imágenes tango" ON storage.objects;
+CREATE POLICY "Storage: administradores pueden subir imágenes tango"
   ON storage.objects FOR INSERT
   TO authenticated
-  WITH CHECK (bucket_id = 'remeras-images' AND public.is_admin());
+  WITH CHECK (bucket_id = 'tango-remeras-images' AND public.tango_is_admin());
 
-CREATE POLICY "Storage: administradores pueden actualizar y borrar imágenes"
+DROP POLICY IF EXISTS "Storage: administradores pueden actualizar y borrar imágenes tango" ON storage.objects;
+CREATE POLICY "Storage: administradores pueden actualizar y borrar imágenes tango"
   ON storage.objects FOR UPDATE
   TO authenticated
-  USING (bucket_id = 'remeras-images' AND public.is_admin());
+  USING (bucket_id = 'tango-remeras-images' AND public.tango_is_admin());
 
-CREATE POLICY "Storage: administradores pueden eliminar imágenes"
+DROP POLICY IF EXISTS "Storage: administradores pueden eliminar imágenes tango" ON storage.objects;
+CREATE POLICY "Storage: administradores pueden eliminar imágenes tango"
   ON storage.objects FOR DELETE
   TO authenticated
-  USING (bucket_id = 'remeras-images' AND public.is_admin());
+  USING (bucket_id = 'tango-remeras-images' AND public.tango_is_admin());
 
 
 -- 9. DATOS SEMILLA (HOMENAJES Y REMERAS DE EJEMPLO)
-INSERT INTO public.collections (name, bio, instagram, avatar_url)
+INSERT INTO public.tango_collections (name, bio, instagram, avatar_url)
 VALUES
   (
     'Homenaje a Tita Merello',
@@ -276,7 +300,7 @@ VALUES
   )
 ON CONFLICT (name) DO NOTHING;
 
-INSERT INTO public.remeras (
+INSERT INTO public.tango_remeras (
   title,
   description,
   price,

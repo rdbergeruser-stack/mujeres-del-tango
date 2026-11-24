@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 
-// POST /api/notify-payment - Registrar pedido y aviso de transferencia
+// POST /api/notify-payment - Registrar pedido y aviso de transferencia en tablas tango_
 export async function POST(req: NextRequest) {
   try {
     const supabase = await createClient();
@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
     // Consultar precio y detalles de la remera
     const adminClient = createAdminClient();
     const { data: remera, error: remeraError } = await (adminClient as any)
-      .from('remeras')
+      .from('tango_remeras')
       .select('*')
       .eq('id', remera_id)
       .single();
@@ -52,14 +52,14 @@ export async function POST(req: NextRequest) {
     // Actualizar dirección del perfil si se ingresó una nueva
     if (delivery_type === 'envio' && shipping_address) {
       await (adminClient as any)
-        .from('profiles')
+        .from('tango_profiles')
         .update({ address: shipping_address })
         .eq('id', user.id);
     }
 
     // 1. Crear el pedido
     const { data: order, error: orderInsertError } = await (adminClient as any)
-      .from('orders')
+      .from('tango_orders')
       .insert({
         user_id: user.id,
         remera_id,
@@ -80,7 +80,7 @@ export async function POST(req: NextRequest) {
 
     // 2. Crear la notificación de pago vinculada
     const { data: notification, error: notifError } = await (adminClient as any)
-      .from('payment_notifications')
+      .from('tango_payment_notifications')
       .insert({
         order_id: (order as any).id,
         user_id: user.id,

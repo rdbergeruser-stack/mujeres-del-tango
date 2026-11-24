@@ -80,7 +80,7 @@ export interface PaymentNotification {
 export interface Database {
   public: {
     Tables: {
-      profiles: {
+      tango_profiles: {
         Row: Profile;
         Insert: {
           id: string;
@@ -104,7 +104,7 @@ export interface Database {
         };
         Relationships: [];
       };
-      collections: {
+      tango_collections: {
         Row: Collection;
         Insert: {
           id?: string;
@@ -124,7 +124,7 @@ export interface Database {
         };
         Relationships: [];
       };
-      remeras: {
+      tango_remeras: {
         Row: Remera;
         Insert: {
           id?: string;
@@ -158,7 +158,7 @@ export interface Database {
         };
         Relationships: [];
       };
-      orders: {
+      tango_orders: {
         Row: {
           id: string;
           user_id: string;
@@ -206,7 +206,7 @@ export interface Database {
         };
         Relationships: [];
       };
-      payment_notifications: {
+      tango_payment_notifications: {
         Row: {
           id: string;
           order_id: string;
@@ -238,7 +238,7 @@ export interface Database {
       [_ in never]: never;
     };
     Functions: {
-      is_admin: {
+      tango_is_admin: {
         Args: Record<PropertyKey, never>;
         Returns: boolean;
       };

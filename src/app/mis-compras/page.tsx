@@ -20,11 +20,11 @@ export default function MisComprasPage() {
         if (!user) return;
 
         const { data, error } = await supabase
-          .from('orders')
+          .from('tango_orders')
           .select(`
             *,
-            remera:remeras(id, title, image_url, price, collection_name),
-            payment_notification:payment_notifications(id, reference_code, status, created_at)
+            remera:tango_remeras(id, title, image_url, price, collection_name),
+            payment_notification:tango_payment_notifications(id, reference_code, status, created_at)
           `)
           .eq('user_id', user.id)
           .order('created_at', { ascending: false });

@@ -31,10 +31,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: updateError.message }, { status: 400 });
     }
 
-    // 2. Desactivar el flag must_change_password
+    // 2. Desactivar el flag must_change_password en tango_profiles
     const adminClient = createAdminClient();
     const { error: profileError } = await (adminClient as any)
-      .from('profiles')
+      .from('tango_profiles')
       .update({ must_change_password: false })
       .eq('id', user.id);
 

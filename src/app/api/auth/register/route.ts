@@ -28,6 +28,7 @@ export async function POST(req: NextRequest) {
       password,
       options: {
         data: {
+          app: 'mujeres_del_tango',
           full_name,
           phone: phone || '',
           address: address || '',

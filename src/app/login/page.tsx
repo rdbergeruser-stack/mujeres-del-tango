@@ -42,7 +42,7 @@ function LoginForm() {
 
       if (data.user) {
         const { data: profile } = await supabase
-          .from('profiles')
+          .from('tango_profiles')
           .select('role, must_change_password')
           .eq('id', data.user.id)
           .single();

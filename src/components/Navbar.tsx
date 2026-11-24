@@ -1,10 +1,9 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import Link from 'next/navigation';
 import { usePathname, useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { ShoppingBag, User, LogOut, ShieldCheck, Menu, X, Sparkles, Heart } from 'lucide-react';
+import { ShoppingBag, LogOut, ShieldCheck, Menu, X } from 'lucide-react';
 
 export default function Navbar() {
   const router = useRouter();
@@ -24,7 +23,7 @@ export default function Navbar() {
 
         if (user) {
           const { data: prof } = await supabase
-            .from('profiles')
+            .from('tango_profiles')
             .select('*')
             .eq('id', user.id)
             .single();

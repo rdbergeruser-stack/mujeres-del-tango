@@ -9,7 +9,7 @@ async function checkAdmin() {
   if (!user) return false;
 
   const { data: profile } = await supabase
-    .from('profiles')
+    .from('tango_profiles')
     .select('role')
     .eq('id', user.id)
     .single();
@@ -17,7 +17,7 @@ async function checkAdmin() {
   return (profile as any)?.role === 'admin' || user.email?.toLowerCase().includes('maris');
 }
 
-// GET /api/admin/orders - Listar todos los pedidos con sus detalles
+// GET /api/admin/orders - Listar todos los pedidos de Mujeres del Tango
 export async function GET() {
   try {
     const isAdmin = await checkAdmin();
@@ -27,12 +27,12 @@ export async function GET() {
 
     const adminClient = createAdminClient();
     const { data: orders, error } = await (adminClient as any)
-      .from('orders')
+      .from('tango_orders')
       .select(`
         *,
-        profile:profiles(id, full_name, email, phone, address),
-        remera:remeras(id, title, image_url, price, stock),
-        payment_notification:payment_notifications(id, reference_code, status, created_at)
+        profile:tango_profiles(id, full_name, email, phone, address),
+        remera:tango_remeras(id, title, image_url, price, stock),
+        payment_notification:tango_payment_notifications(id, reference_code, status, created_at)
       `)
       .order('created_at', { ascending: false });
 
@@ -44,7 +44,7 @@ export async function GET() {
   }
 }
 
-// PATCH /api/admin/orders - Aprobar, entregar o rechazar pedido (con descuento de stock)
+// PATCH /api/admin/orders - Aprobar, entregar o rechazar pedido
 export async function PATCH(req: NextRequest) {
   try {
     const isAdmin = await checkAdmin();
@@ -62,8 +62,8 @@ export async function PATCH(req: NextRequest) {
 
     // 1. Obtener la orden completa
     const { data: order, error: orderFetchError } = await (adminClient as any)
-      .from('orders')
-      .select('*, profile:profiles(*), remera:remeras(*)')
+      .from('tango_orders')
+      .select('*, profile:tango_profiles(*), remera:tango_remeras(*)')
       .eq('id', orderId)
       .single();
 
@@ -73,11 +73,11 @@ export async function PATCH(req: NextRequest) {
 
     const previousStatus = (order as any).status;
 
-    // 2. Si pasa a 'approved' y antes no estaba aprobado, descontar stock de la remera
+    // 2. Si pasa a 'approved', descontar stock de la remera
     if (newStatus === 'approved' && previousStatus !== 'approved' && previousStatus !== 'delivered') {
       const targetRemeraId = currentRemeraId || (order as any).remera_id;
       const { data: remeraData } = await (adminClient as any)
-        .from('remeras')
+        .from('tango_remeras')
         .select('stock')
         .eq('id', targetRemeraId)
         .single();
@@ -85,26 +85,26 @@ export async function PATCH(req: NextRequest) {
       if (remeraData) {
         const updatedStock = Math.max(0, (remeraData.stock || 0) - ((order as any).quantity || quantity || 1));
         await (adminClient as any)
-          .from('remeras')
+          .from('tango_remeras')
           .update({ stock: updatedStock })
           .eq('id', targetRemeraId);
       }
 
       // También actualizar el aviso de pago a 'approved'
       await (adminClient as any)
-        .from('payment_notifications')
+        .from('tango_payment_notifications')
         .update({ status: 'approved' })
         .eq('order_id', orderId);
     } else if (newStatus === 'rejected') {
       await (adminClient as any)
-        .from('payment_notifications')
+        .from('tango_payment_notifications')
         .update({ status: 'rejected' })
         .eq('order_id', orderId);
     }
 
     // 3. Actualizar estado del pedido
     const { data: updatedOrder, error: updateError } = await (adminClient as any)
-      .from('orders')
+      .from('tango_orders')
       .update({ status: newStatus })
       .eq('id', orderId)
       .select()
@@ -151,7 +151,7 @@ export async function DELETE(req: NextRequest) {
     if (!id) return NextResponse.json({ error: 'ID requerido' }, { status: 400 });
 
     const adminClient = createAdminClient();
-    const { error } = await adminClient.from('orders').delete().eq('id', id);
+    const { error } = await adminClient.from('tango_orders').delete().eq('id', id);
 
     if (error) throw error;
     return NextResponse.json({ success: true });

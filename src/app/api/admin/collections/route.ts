@@ -8,7 +8,7 @@ async function checkAdmin() {
   if (!user) return false;
 
   const { data: profile } = await supabase
-    .from('profiles')
+    .from('tango_profiles')
     .select('role')
     .eq('id', user.id)
     .single();
@@ -21,7 +21,7 @@ export async function GET() {
   try {
     const adminClient = createAdminClient();
     const { data: collections, error } = await adminClient
-      .from('collections')
+      .from('tango_collections')
       .select('*')
       .order('created_at', { ascending: false });
 
@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
     }
 
     const { data: collection, error } = await (adminClient as any)
-      .from('collections')
+      .from('tango_collections')
       .insert({
         name: name.trim(),
         bio: bio || null,
@@ -79,7 +79,7 @@ export async function DELETE(req: NextRequest) {
     if (!id) return NextResponse.json({ error: 'ID es requerido' }, { status: 400 });
 
     const adminClient = createAdminClient();
-    const { error } = await adminClient.from('collections').delete().eq('id', id);
+    const { error } = await adminClient.from('tango_collections').delete().eq('id', id);
 
     if (error) throw error;
     return NextResponse.json({ success: true });

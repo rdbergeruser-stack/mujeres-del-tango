@@ -73,7 +73,7 @@ export default function HomePage() {
 
         if (user) {
           const { data: prof } = await supabase
-            .from('profiles')
+            .from('tango_profiles')
             .select('*')
             .eq('id', user.id)
             .single();
@@ -85,7 +85,7 @@ export default function HomePage() {
 
         // 2. Cargar remeras activas
         const { data: remerasData, error: remerasError } = await supabase
-          .from('remeras')
+          .from('tango_remeras')
           .select('*')
           .eq('is_active', true)
           .order('created_at', { ascending: false });
@@ -95,7 +95,7 @@ export default function HomePage() {
 
         // 3. Cargar colecciones
         const { data: collectionsData, error: collError } = await supabase
-          .from('collections')
+          .from('tango_collections')
           .select('*')
           .order('name', { ascending: true });
 

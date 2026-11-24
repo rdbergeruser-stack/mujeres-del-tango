@@ -8,7 +8,7 @@ async function checkAdmin() {
   if (!user) return false;
 
   const { data: profile } = await supabase
-    .from('profiles')
+    .from('tango_profiles')
     .select('role')
     .eq('id', user.id)
     .single();
@@ -16,7 +16,7 @@ async function checkAdmin() {
   return (profile as any)?.role === 'admin' || user.email?.toLowerCase().includes('maris');
 }
 
-// GET /api/admin/remeras - Listar todas las remeras (incluyendo inactivas)
+// GET /api/admin/remeras - Listar todas las remeras
 export async function GET() {
   try {
     const isAdmin = await checkAdmin();
@@ -26,7 +26,7 @@ export async function GET() {
 
     const adminClient = createAdminClient();
     const { data: remeras, error } = await adminClient
-      .from('remeras')
+      .from('tango_remeras')
       .select('*')
       .order('created_at', { ascending: false });
 
@@ -37,7 +37,7 @@ export async function GET() {
   }
 }
 
-// POST /api/admin/remeras - Crear nueva remera o subir imagen
+// POST /api/admin/remeras - Crear nueva remera o subir imagen a tango-remeras-images
 export async function POST(req: NextRequest) {
   try {
     const isAdmin = await checkAdmin();
@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
         const buffer = Buffer.from(arrayBuffer);
 
         const { error: uploadError } = await adminClient.storage
-          .from('remeras-images')
+          .from('tango-remeras-images')
           .upload(fileName, buffer, {
             contentType: file.type,
             upsert: true,
@@ -84,14 +84,14 @@ export async function POST(req: NextRequest) {
           console.error('Error al subir imagen a Supabase Storage:', uploadError);
         } else {
           const { data: publicUrlData } = adminClient.storage
-            .from('remeras-images')
+            .from('tango-remeras-images')
             .getPublicUrl(fileName);
           image_url = publicUrlData.publicUrl;
         }
       }
 
       const { data: newRemera, error: insertError } = await (adminClient as any)
-        .from('remeras')
+        .from('tango_remeras')
         .insert({
           title,
           description,
@@ -113,7 +113,7 @@ export async function POST(req: NextRequest) {
     } else {
       const body = await req.json();
       const { data: newRemera, error: insertError } = await (adminClient as any)
-        .from('remeras')
+        .from('tango_remeras')
         .insert(body)
         .select()
         .single();
@@ -166,7 +166,7 @@ export async function PUT(req: NextRequest) {
         const buffer = Buffer.from(arrayBuffer);
 
         const { error: uploadError } = await adminClient.storage
-          .from('remeras-images')
+          .from('tango-remeras-images')
           .upload(fileName, buffer, {
             contentType: file.type,
             upsert: true,
@@ -174,7 +174,7 @@ export async function PUT(req: NextRequest) {
 
         if (!uploadError) {
           const { data: publicUrlData } = adminClient.storage
-            .from('remeras-images')
+            .from('tango-remeras-images')
             .getPublicUrl(fileName);
           updateData.image_url = publicUrlData.publicUrl;
         }
@@ -183,7 +183,7 @@ export async function PUT(req: NextRequest) {
       }
 
       const { data: updated, error: updateError } = await (adminClient as any)
-        .from('remeras')
+        .from('tango_remeras')
         .update(updateData)
         .eq('id', id)
         .select()
@@ -197,7 +197,7 @@ export async function PUT(req: NextRequest) {
       if (!id) return NextResponse.json({ error: 'ID es requerido' }, { status: 400 });
 
       const { data: updated, error: updateError } = await (adminClient as any)
-        .from('remeras')
+        .from('tango_remeras')
         .update(updateFields)
         .eq('id', id)
         .select()
@@ -224,7 +224,7 @@ export async function DELETE(req: NextRequest) {
     if (!id) return NextResponse.json({ error: 'ID es requerido' }, { status: 400 });
 
     const adminClient = createAdminClient();
-    const { error } = await adminClient.from('remeras').delete().eq('id', id);
+    const { error } = await adminClient.from('tango_remeras').delete().eq('id', id);
 
     if (error) throw error;
     return NextResponse.json({ success: true });

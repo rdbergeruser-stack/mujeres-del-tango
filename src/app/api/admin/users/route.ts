@@ -9,7 +9,7 @@ async function checkAdmin() {
   if (!user) return false;
 
   const { data: profile } = await supabase
-    .from('profiles')
+    .from('tango_profiles')
     .select('role')
     .eq('id', user.id)
     .single();
@@ -17,7 +17,7 @@ async function checkAdmin() {
   return (profile as any)?.role === 'admin' || user.email?.toLowerCase().includes('maris');
 }
 
-// GET /api/admin/users - Listado de todos los perfiles de clientes
+// GET /api/admin/users - Listado de clientes de Mujeres del Tango
 export async function GET() {
   try {
     const isAdmin = await checkAdmin();
@@ -27,7 +27,7 @@ export async function GET() {
 
     const adminClient = createAdminClient();
     const { data: profiles, error } = await adminClient
-      .from('profiles')
+      .from('tango_profiles')
       .select('*')
       .order('created_at', { ascending: false });
 
@@ -38,7 +38,7 @@ export async function GET() {
   }
 }
 
-// POST /api/admin/users - Creación asistida de clientes por parte de Maris
+// POST /api/admin/users - Creación asistida de clientes por Maris
 export async function POST(req: NextRequest) {
   try {
     const isAdmin = await checkAdmin();
@@ -68,6 +68,7 @@ export async function POST(req: NextRequest) {
       password: temp_password,
       email_confirm: true,
       user_metadata: {
+        app: 'mujeres_del_tango',
         full_name,
         phone,
         address,
@@ -83,7 +84,7 @@ export async function POST(req: NextRequest) {
     const userId = authData.user.id;
 
     await (adminClient as any)
-      .from('profiles')
+      .from('tango_profiles')
       .upsert({
         id: userId,
         email,
@@ -118,7 +119,7 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// PATCH /api/admin/users - Resetear contraseña provisoria a 123456
+// PATCH /api/admin/users - Resetear contraseña provisoria
 export async function PATCH(req: NextRequest) {
   try {
     const isAdmin = await checkAdmin();
@@ -141,12 +142,12 @@ export async function PATCH(req: NextRequest) {
     if (resetError) throw resetError;
 
     await (adminClient as any)
-      .from('profiles')
+      .from('tango_profiles')
       .update({ must_change_password: true })
       .eq('id', userId);
 
     const { data: profile } = await (adminClient as any)
-      .from('profiles')
+      .from('tango_profiles')
       .select('*')
       .eq('id', userId)
       .single();
