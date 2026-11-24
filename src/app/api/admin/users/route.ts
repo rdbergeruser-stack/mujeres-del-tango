@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
-import { buildWhatsAppLink, usernameToInternalEmail } from '@/lib/utils';
+import { buildWhatsAppLink, usernameToInternalEmail, extractUsername } from '@/lib/utils';
 
 async function checkAdmin() {
   const supabase = await createClient();
@@ -38,7 +38,7 @@ export async function GET() {
   }
 }
 
-// POST /api/admin/users - Creación asistida de clientes por Maris (con Usuario, sin email)
+// POST /api/admin/users - Creación asistida de clientes por Maris
 export async function POST(req: NextRequest) {
   try {
     const isAdmin = await checkAdmin();
@@ -54,7 +54,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'El nombre completo es requerido' }, { status: 400 });
     }
 
-    // Si no se especificó usuario, se genera a partir del nombre completo
     let cleanUsername = username?.trim().toLowerCase();
     if (!cleanUsername) {
       cleanUsername = full_name
@@ -131,6 +130,65 @@ export async function POST(req: NextRequest) {
   }
 }
 
+// PUT /api/admin/users - Modificar datos de cliente existente
+export async function PUT(req: NextRequest) {
+  try {
+    const isAdmin = await checkAdmin();
+    if (!isAdmin) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+    }
+
+    const adminClient = createAdminClient();
+    const body = await req.json();
+    const { userId, full_name, username, phone, address, role } = body;
+
+    if (!userId) {
+      return NextResponse.json({ error: 'userId es requerido' }, { status: 400 });
+    }
+
+    const updateFields: any = {};
+    if (full_name !== undefined) updateFields.full_name = full_name.trim();
+    if (phone !== undefined) updateFields.phone = phone.trim();
+    if (address !== undefined) updateFields.address = address.trim();
+    if (role !== undefined) updateFields.role = role;
+
+    // Si cambia el usuario
+    if (username && username.trim()) {
+      const cleanUsername = username.trim().toLowerCase().replace(/[^a-z0-9._-]/g, '');
+      const newEmail = usernameToInternalEmail(cleanUsername);
+      updateFields.email = newEmail;
+
+      // Actualizar en auth.users
+      await adminClient.auth.admin.updateUserById(userId, {
+        email: newEmail,
+        user_metadata: {
+          username: cleanUsername,
+          full_name: full_name?.trim(),
+          phone: phone?.trim(),
+          address: address?.trim(),
+        },
+      });
+    }
+
+    // Actualizar en tango_profiles
+    const { data: updatedProfile, error: updateError } = await (adminClient as any)
+      .from('tango_profiles')
+      .update(updateFields)
+      .eq('id', userId)
+      .select()
+      .single();
+
+    if (updateError) throw updateError;
+
+    return NextResponse.json({
+      success: true,
+      profile: updatedProfile,
+    });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message || 'Error al actualizar cliente' }, { status: 500 });
+  }
+}
+
 // PATCH /api/admin/users - Resetear contraseña provisoria
 export async function PATCH(req: NextRequest) {
   try {
@@ -164,7 +222,7 @@ export async function PATCH(req: NextRequest) {
       .eq('id', userId)
       .single();
 
-    const username = profile?.email ? profile.email.replace('@mujeresdeltango.com', '') : '';
+    const username = extractUsername(profile?.email);
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://mujeres-del-tango.vercel.app';
     const loginUrl = `${siteUrl}/login`;
     const message = `¡Hola ${profile?.full_name}! Te saluda Maris de Mujeres del Tango. Se reestableció tu acceso. Tu usuario es: ${username} y tu contraseña temporal es: ${temp_password}. Ingresá en ${loginUrl} y elegí tu nueva contraseña.`;
@@ -178,5 +236,37 @@ export async function PATCH(req: NextRequest) {
     });
   } catch (error: any) {
     return NextResponse.json({ error: error.message || 'Error al resetear contraseña' }, { status: 500 });
+  }
+}
+
+// DELETE /api/admin/users - Eliminar cliente por completo
+export async function DELETE(req: NextRequest) {
+  try {
+    const isAdmin = await checkAdmin();
+    if (!isAdmin) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(req.url);
+    const userId = searchParams.get('id');
+
+    if (!userId) {
+      return NextResponse.json({ error: 'ID de usuario requerido' }, { status: 400 });
+    }
+
+    const adminClient = createAdminClient();
+
+    // 1. Eliminar perfil de tango_profiles
+    await (adminClient as any).from('tango_profiles').delete().eq('id', userId);
+
+    // 2. Eliminar de auth.users
+    const { error: deleteAuthError } = await adminClient.auth.admin.deleteUser(userId);
+    if (deleteAuthError) {
+      console.warn('Nota al eliminar auth.user:', deleteAuthError.message);
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message || 'Error al eliminar cliente' }, { status: 500 });
   }
 }

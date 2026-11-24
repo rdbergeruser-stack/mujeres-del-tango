@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { Remera, Collection, Profile } from '@/types/database';
-import { formatCurrency, buildWhatsAppLink } from '@/lib/utils';
+import { formatCurrency, buildWhatsAppLink, extractUsername } from '@/lib/utils';
 import {
   Package,
   ShoppingBag,
@@ -72,6 +72,14 @@ export default function AdminPage() {
   const [clientTempPass, setClientTempPass] = useState('123456');
   const [createdClientResult, setCreatedClientResult] = useState<any>(null);
   const [creatingClient, setCreatingClient] = useState(false);
+
+  // Edición de Cliente
+  const [editingClient, setEditingClient] = useState<Profile | null>(null);
+  const [editFullName, setEditFullName] = useState('');
+  const [editUsername, setEditUsername] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+  const [editAddress, setEditAddress] = useState('');
+  const [savingClientEdit, setSavingClientEdit] = useState(false);
 
   // Búsqueda en tablas
   const [searchClient, setSearchClient] = useState('');
@@ -150,13 +158,13 @@ export default function AdminPage() {
       return;
     }
 
-    const headers = ['ID Pedido', 'Fecha', 'Cliente', 'WhatsApp', 'Email', 'Remera', 'Talle', 'Color', 'Cantidad', 'Total ARS', 'Entrega', 'Dirección', 'Estado', 'Comprobante'];
+    const headers = ['ID Pedido', 'Fecha', 'Cliente', 'WhatsApp', 'Usuario', 'Remera', 'Talle', 'Color', 'Cantidad', 'Total ARS', 'Entrega', 'Dirección', 'Estado', 'Comprobante'];
     const rows = filteredOrders.map((o) => [
       o.id,
       new Date(o.created_at).toISOString().split('T')[0],
       `"${o.profile?.full_name || ''}"`,
       `"${o.profile?.phone || ''}"`,
-      `"${o.profile?.email || ''}"`,
+      `"${extractUsername(o.profile?.email)}"`,
       `"${o.remera?.title || ''}"`,
       o.selected_size,
       o.selected_color || '',
@@ -346,6 +354,62 @@ export default function AdminPage() {
     }
   };
 
+  const handleOpenEditClient = (c: Profile) => {
+    setEditingClient(c);
+    setEditFullName(c.full_name || '');
+    setEditUsername(extractUsername(c.email));
+    setEditPhone(c.phone || '');
+    setEditAddress(c.address || '');
+  };
+
+  const handleSaveClientEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingClient) return;
+
+    try {
+      setSavingClientEdit(true);
+      const res = await fetch('/api/admin/users', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: editingClient.id,
+          full_name: editFullName,
+          username: editUsername,
+          phone: editPhone,
+          address: editAddress,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Error al actualizar usuario');
+
+      setEditingClient(null);
+      await loadData();
+      alert('Cliente actualizado con éxito');
+    } catch (err: any) {
+      alert(err.message || 'Error al actualizar cliente');
+    } finally {
+      setSavingClientEdit(false);
+    }
+  };
+
+  const handleDeleteClient = async (userId: string, username: string) => {
+    if (!confirm(`¿Estás segura de eliminar permanentemente al usuario "@${username}"?`)) return;
+
+    try {
+      const res = await fetch(`/api/admin/users?id=${userId}`, {
+        method: 'DELETE',
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Error al eliminar usuario');
+
+      await loadData();
+      alert(`Usuario "@${username}" eliminado correctamente.`);
+    } catch (err: any) {
+      alert(err.message || 'Error al eliminar usuario');
+    }
+  };
+
   const handleResetClientPass = async (userId: string) => {
     if (!confirm('¿Resetear contraseña de este cliente a "123456"?')) return;
     try {
@@ -490,7 +554,7 @@ export default function AdminPage() {
             }`}
           >
             <Users className="w-3.5 h-3.5" />
-            <span>Clientes ({clients.length})</span>
+            <span>Directorio de Clientes ({clients.length})</span>
           </button>
 
           <button
@@ -586,7 +650,7 @@ export default function AdminPage() {
                           <tr key={ord.id} className="hover:bg-zinc-50">
                             <td className="py-3 px-3">
                               <p className="font-bold text-zinc-900">{clientName}</p>
-                              <p className="text-[11px] text-zinc-500">{ord.profile?.email}</p>
+                              <p className="text-[11px] text-zinc-500 font-mono">@{extractUsername(ord.profile?.email)}</p>
                               {clientPhone && <p className="text-[10px] text-zinc-400">Tel: {clientPhone}</p>}
                             </td>
 
@@ -781,7 +845,6 @@ export default function AdminPage() {
                     />
                   </div>
 
-                  {/* Talles */}
                   <div className="md:col-span-2">
                     <label className="block text-xs font-semibold text-zinc-700 mb-1">Talles Habilitados:</label>
                     <div className="flex flex-wrap gap-1.5">
@@ -808,7 +871,6 @@ export default function AdminPage() {
                     </div>
                   </div>
 
-                  {/* Foto */}
                   <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-3 bg-zinc-50 p-3 rounded-lg border border-zinc-200">
                     <div>
                       <label className="block text-xs font-semibold text-zinc-700 mb-1">Subir Archivo de Foto:</label>
@@ -861,7 +923,6 @@ export default function AdminPage() {
               </form>
             </div>
 
-            {/* Grilla */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {remeras.map((rem) => (
                 <div
@@ -927,9 +988,10 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* TAB 3: CLIENTES */}
+        {/* TAB 3: CLIENTES Y DIRECTORIO */}
         {activeTab === 'clientes' && (
           <div className="space-y-6">
+            {/* Formulario Alta */}
             <div className="bg-white rounded-xl p-5 border border-zinc-200">
               <h3 className="text-base font-bold text-zinc-900 mb-1">
                 Alta Asistida de Comprador/a
@@ -1016,14 +1078,18 @@ export default function AdminPage() {
               </form>
             </div>
 
+            {/* Directorio de Clientes con Edición y Eliminación */}
             <div className="bg-white rounded-xl border border-zinc-200 overflow-hidden">
               <div className="p-3 border-b border-zinc-200 flex items-center justify-between">
-                <h4 className="font-bold text-zinc-900 text-sm">Directorio de Clientes ({clients.length})</h4>
+                <div>
+                  <h4 className="font-bold text-zinc-900 text-sm">Directorio de Clientes ({clients.length})</h4>
+                  <p className="text-[11px] text-zinc-500">Editá datos personales o eliminá usuarios del sistema.</p>
+                </div>
                 <div className="relative w-56">
                   <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-400" />
                   <input
                     type="text"
-                    placeholder="Buscar..."
+                    placeholder="Buscar cliente..."
                     value={searchClient}
                     onChange={(e) => setSearchClient(e.target.value)}
                     className="w-full pl-8 pr-2.5 py-1 rounded border border-zinc-300 text-xs"
@@ -1038,6 +1104,7 @@ export default function AdminPage() {
                       <th className="py-2.5 px-3">Nombre</th>
                       <th className="py-2.5 px-3">Usuario</th>
                       <th className="py-2.5 px-3">WhatsApp</th>
+                      <th className="py-2.5 px-3">Dirección</th>
                       <th className="py-2.5 px-3">Rol</th>
                       <th className="py-2.5 px-3 text-right">Acciones</th>
                     </tr>
@@ -1048,31 +1115,155 @@ export default function AdminPage() {
                         (c) =>
                           !searchClient ||
                           c.full_name?.toLowerCase().includes(searchClient.toLowerCase()) ||
-                          c.email.toLowerCase().includes(searchClient.toLowerCase())
+                          c.email.toLowerCase().includes(searchClient.toLowerCase()) ||
+                          c.phone?.includes(searchClient)
                       )
-                      .map((c) => (
-                        <tr key={c.id} className="hover:bg-zinc-50">
-                          <td className="py-2.5 px-3 font-semibold text-zinc-900">{c.full_name || 'Sin nombre'}</td>
-                          <td className="py-2.5 px-3 font-mono text-zinc-600">@{c.email.replace('@mujeresdeltango.com', '')}</td>
-                          <td className="py-2.5 px-3 font-mono">{c.phone || '-'}</td>
-                          <td className="py-2.5 px-3">
-                            <span className="px-1.5 py-0.5 rounded text-[10px] bg-zinc-100 font-medium">
-                              {c.role}
-                            </span>
-                          </td>
-                          <td className="py-2.5 px-3 text-right">
-                            <button
-                              onClick={() => handleResetClientPass(c.id)}
-                              className="px-2 py-0.5 rounded bg-zinc-100 hover:bg-zinc-200 text-zinc-700 text-[11px]"
-                            >
-                              Reset Clave
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
+                      .map((c) => {
+                        const username = extractUsername(c.email);
+                        const whatsAppDirect = c.phone
+                          ? buildWhatsAppLink(
+                              c.phone,
+                              `Hola ${c.full_name}, te saluda Maris de Mujeres del Tango.`
+                            )
+                          : null;
+
+                        return (
+                          <tr key={c.id} className="hover:bg-zinc-50 transition-colors">
+                            <td className="py-2.5 px-3 font-semibold text-zinc-900">{c.full_name || 'Sin nombre'}</td>
+                            <td className="py-2.5 px-3 font-mono text-zinc-600">@{username}</td>
+                            <td className="py-2.5 px-3 font-mono">{c.phone || '-'}</td>
+                            <td className="py-2.5 px-3 max-w-[180px] truncate text-zinc-500">{c.address || '-'}</td>
+                            <td className="py-2.5 px-3">
+                              <span
+                                className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                                  c.role === 'admin' ? 'bg-zinc-900 text-white' : 'bg-zinc-100 text-zinc-700'
+                                }`}
+                              >
+                                {c.role}
+                              </span>
+                            </td>
+                            <td className="py-2.5 px-3 text-right">
+                              <div className="flex items-center justify-end gap-1.5">
+                                {whatsAppDirect && (
+                                  <a
+                                    href={whatsAppDirect}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="p-1.5 rounded hover:bg-zinc-100 text-zinc-600 hover:text-zinc-900"
+                                    title="Contactar por WhatsApp"
+                                  >
+                                    <MessageCircle className="w-3.5 h-3.5" />
+                                  </a>
+                                )}
+
+                                <button
+                                  onClick={() => handleOpenEditClient(c)}
+                                  className="p-1.5 rounded hover:bg-zinc-100 text-zinc-600 hover:text-zinc-900"
+                                  title="Editar cliente"
+                                >
+                                  <Edit2 className="w-3.5 h-3.5" />
+                                </button>
+
+                                <button
+                                  onClick={() => handleResetClientPass(c.id)}
+                                  className="px-2 py-0.5 rounded bg-zinc-100 hover:bg-zinc-200 text-zinc-700 text-[11px]"
+                                  title="Resetear clave a 123456"
+                                >
+                                  Reset
+                                </button>
+
+                                <button
+                                  onClick={() => handleDeleteClient(c.id, username)}
+                                  className="p-1.5 rounded hover:bg-red-50 text-zinc-400 hover:text-red-600"
+                                  title="Eliminar usuario"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
                   </tbody>
                 </table>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* MODAL EDITAR CLIENTE */}
+        {editingClient && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+            <div className="bg-white rounded-xl max-w-md w-full p-5 space-y-4">
+              <div className="flex items-center justify-between border-b border-zinc-200 pb-2">
+                <h4 className="font-bold text-zinc-900 text-sm">
+                  Editar Datos de Cliente (@{extractUsername(editingClient.email)})
+                </h4>
+                <button onClick={() => setEditingClient(null)}>
+                  <X className="w-4 h-4 text-zinc-400" />
+                </button>
+              </div>
+
+              <form onSubmit={handleSaveClientEdit} className="space-y-3">
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-700 mb-1">Nombre Completo:</label>
+                  <input
+                    type="text"
+                    required
+                    value={editFullName}
+                    onChange={(e) => setEditFullName(e.target.value)}
+                    className="w-full p-2 rounded-lg border border-zinc-300 text-xs text-zinc-900"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-700 mb-1">Usuario (para iniciar sesión):</label>
+                  <input
+                    type="text"
+                    required
+                    value={editUsername}
+                    onChange={(e) => setEditUsername(e.target.value)}
+                    className="w-full p-2 rounded-lg border border-zinc-300 text-xs text-zinc-900 font-mono"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-700 mb-1">WhatsApp / Teléfono:</label>
+                  <input
+                    type="tel"
+                    value={editPhone}
+                    onChange={(e) => setEditPhone(e.target.value)}
+                    className="w-full p-2 rounded-lg border border-zinc-300 text-xs text-zinc-900 font-mono"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-700 mb-1">Dirección de entrega:</label>
+                  <input
+                    type="text"
+                    value={editAddress}
+                    onChange={(e) => setEditAddress(e.target.value)}
+                    className="w-full p-2 rounded-lg border border-zinc-300 text-xs text-zinc-900"
+                  />
+                </div>
+
+                <div className="pt-2 flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setEditingClient(null)}
+                    className="px-3 py-1.5 rounded-lg border border-zinc-300 text-zinc-700 text-xs"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={savingClientEdit}
+                    className="px-4 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-medium"
+                  >
+                    {savingClientEdit ? 'Guardando...' : 'Guardar Cambios'}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         )}
