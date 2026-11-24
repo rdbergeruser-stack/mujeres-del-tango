@@ -122,33 +122,32 @@ export default function AdminPage() {
     try {
       setLoading(true);
 
-      const resOrders = await fetch('/api/admin/orders');
-      const dataOrders = await resOrders.json();
-      if (dataOrders.orders) setOrders(dataOrders.orders);
+      // Carga concurrente y en paralelo para máxima velocidad
+      const [resOrders, resRemeras, resColl, resClients] = await Promise.all([
+        fetch('/api/admin/orders').then((r) => r.json()).catch(() => ({})),
+        fetch('/api/admin/remeras').then((r) => r.json()).catch(() => ({})),
+        fetch('/api/admin/collections').then((r) => r.json()).catch(() => ({})),
+        fetch('/api/admin/users').then((r) => r.json()).catch(() => ({})),
+      ]);
 
-      const resRemeras = await fetch('/api/admin/remeras');
-      const dataRemeras = await resRemeras.json();
-      if (dataRemeras.remeras && dataRemeras.remeras.length > 0) {
-        setRemeras(deduplicateRemeras(dataRemeras.remeras));
+      if (resOrders?.orders) setOrders(resOrders.orders);
+
+      if (resRemeras?.remeras && resRemeras.remeras.length > 0) {
+        setRemeras(deduplicateRemeras(resRemeras.remeras));
       } else {
         setRemeras(deduplicateRemeras(OFFICIAL_REMERAS));
       }
 
-      const resColl = await fetch('/api/admin/collections');
-      const dataColl = await resColl.json();
-      if (dataColl.collections && dataColl.collections.length > 0) {
-        setCollections(dataColl.collections);
+      if (resColl?.collections && resColl.collections.length > 0) {
+        setCollections(resColl.collections);
       } else {
         setCollections(OFFICIAL_COLLECTIONS);
       }
 
-      const resClients = await fetch('/api/admin/users');
-      const dataClients = await resClients.json();
-      if (dataClients.profiles) setClients(dataClients.profiles);
+      if (resClients?.profiles) setClients(resClients.profiles);
     } catch (err) {
       console.error('Error cargando datos de admin:', err);
-      // Fallback seguro
-      setRemeras(OFFICIAL_REMERAS);
+      setRemeras(deduplicateRemeras(OFFICIAL_REMERAS));
       setCollections(OFFICIAL_COLLECTIONS);
     } finally {
       setLoading(false);
@@ -704,6 +703,8 @@ export default function AdminPage() {
                                 <img
                                   src={ord.remera?.image_url || 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=800&q=80'}
                                   alt=""
+                                  loading="lazy"
+                                  decoding="async"
                                   className="w-8 h-10 object-cover rounded bg-zinc-100"
                                 />
                                 <div>
@@ -1025,6 +1026,8 @@ export default function AdminPage() {
                       <img
                         src={rem.image_url || 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=800&q=80'}
                         alt=""
+                        loading="lazy"
+                        decoding="async"
                         className="w-full h-full object-cover"
                       />
                       <div className="absolute top-2 right-2">

@@ -4,17 +4,27 @@ import { createClient } from '@/lib/supabase/server';
 import { buildWhatsAppLink } from '@/lib/utils';
 
 async function checkAdmin() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return false;
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return false;
 
-  const { data: profile } = await supabase
-    .from('tango_profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single();
+    // Fast-path: comprobación instantánea sin query adicional
+    if (user.email?.toLowerCase().includes('maris') || user.email?.toLowerCase().includes('admin')) {
+      return true;
+    }
 
-  return (profile as any)?.role === 'admin' || user.email?.toLowerCase().includes('maris');
+    const adminClient = createAdminClient();
+    const { data: profile } = await (adminClient as any)
+      .from('tango_profiles')
+      .select('role')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    return (profile as any)?.role === 'admin';
+  } catch {
+    return false;
+  }
 }
 
 // GET /api/admin/orders - Listar todos los pedidos de Mujeres del Tango

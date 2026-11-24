@@ -124,6 +124,8 @@ export default function MisComprasPage() {
                       <img
                         src={order.remera.image_url}
                         alt={order.remera?.title}
+                        loading="lazy"
+                        decoding="async"
                         className="w-16 h-16 rounded-xl object-cover border border-zinc-800 shrink-0"
                       />
                     ) : (

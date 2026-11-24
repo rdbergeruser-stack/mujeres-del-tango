@@ -26,7 +26,7 @@ async function checkAdmin() {
   }
 }
 
-async function cleanDuplicateRemeras(adminClient: any, list: any[]): Promise<any[]> {
+function cleanDuplicateRemeras(adminClient: any, list: any[]): any[] {
   if (!list || !Array.isArray(list)) return [];
   const byTitle = new Map<string, any[]>();
   for (const item of list) {
@@ -36,6 +36,8 @@ async function cleanDuplicateRemeras(adminClient: any, list: any[]): Promise<any
   }
 
   const cleanList: any[] = [];
+  const cleanupTasks: Promise<any>[] = [];
+
   for (const [key, group] of byTitle.entries()) {
     if (group.length === 1) {
       cleanList.push(group[0]);
@@ -45,24 +47,32 @@ async function cleanDuplicateRemeras(adminClient: any, list: any[]): Promise<any
       const toKeep = group[0];
       cleanList.push(toKeep);
 
-      // Eliminar los duplicados restantes de la base de datos
+      // Eliminar los duplicados restantes de la base de datos en segundo plano
       for (let i = 1; i < group.length; i++) {
         const dup = group[i];
-        try {
-          await adminClient
-            .from('tango_orders')
-            .update({ remera_id: toKeep.id })
-            .eq('remera_id', dup.id);
+        cleanupTasks.push(
+          (async () => {
+            try {
+              await adminClient
+                .from('tango_orders')
+                .update({ remera_id: toKeep.id })
+                .eq('remera_id', dup.id);
 
-          await adminClient
-            .from('tango_remeras')
-            .delete()
-            .eq('id', dup.id);
-        } catch (delErr) {
-          console.error('Error al depurar duplicado en BD:', dup.id, delErr);
-        }
+              await adminClient
+                .from('tango_remeras')
+                .delete()
+                .eq('id', dup.id);
+            } catch (delErr) {
+              console.error('Error al depurar duplicado en BD:', dup.id, delErr);
+            }
+          })()
+        );
       }
     }
+  }
+
+  if (cleanupTasks.length > 0) {
+    Promise.allSettled(cleanupTasks).catch(() => {});
   }
 
   return cleanList;
@@ -80,7 +90,7 @@ export async function GET() {
       .order('created_at', { ascending: false });
 
     if (!error && remeras && remeras.length > 0) {
-      const cleanRemeras = await cleanDuplicateRemeras(adminClient, remeras);
+      const cleanRemeras = cleanDuplicateRemeras(adminClient, remeras);
       return NextResponse.json({ remeras: cleanRemeras });
     }
 
@@ -133,14 +143,13 @@ export async function GET() {
       .select('*')
       .order('created_at', { ascending: false });
 
-    const cleanSeeded = await cleanDuplicateRemeras(adminClient, seededRemeras || []);
+    const cleanSeeded = cleanDuplicateRemeras(adminClient, seededRemeras || []);
 
     return NextResponse.json({
       remeras: cleanSeeded && cleanSeeded.length > 0 ? cleanSeeded : OFFICIAL_REMERAS,
     });
   } catch (error: any) {
     console.error('Error al obtener o sembrar remeras:', error);
-    // Fallback asegurado para que el panel de administración nunca quede en blanco
     return NextResponse.json({ remeras: OFFICIAL_REMERAS });
   }
 }

@@ -75,49 +75,47 @@ export default function HomePage() {
       try {
         setLoading(true);
 
-        const { data: { user } } = await supabase.auth.getUser();
+        // Carga concurrente y en paralelo para máxima velocidad inicial
+        const [userRes, remerasRes, collectionsRes] = await Promise.all([
+          supabase.auth.getUser().catch(() => ({ data: { user: null } })),
+          fetch('/api/remeras').then((r) => r.json()).catch(() => ({ remeras: OFFICIAL_REMERAS })),
+          supabase.from('tango_collections').select('*').order('name', { ascending: true }),
+        ]);
+
+        const user = userRes?.data?.user;
         setCurrentUser(user);
 
         if (user) {
-          const { data: prof } = await supabase
+          supabase
             .from('tango_profiles')
             .select('*')
             .eq('id', user.id)
-            .single();
-          if (prof) {
-            setUserProfile(prof as Profile);
-            const addr = (prof as any).address || '';
-            setShippingAddress(addr);
-            setShippingAddressData(parseDetailedAddress(addr));
-          }
+            .maybeSingle()
+            .then(({ data: prof }) => {
+              if (prof) {
+                setUserProfile(prof as Profile);
+                const addr = (prof as any).address || '';
+                setShippingAddress(addr);
+                setShippingAddressData(parseDetailedAddress(addr));
+              }
+            });
         }
 
-        // 1. Obtener remeras (la API se encarga de autosembrar y depurar duplicados)
-        try {
-          const res = await fetch('/api/remeras');
-          const data = await res.json();
-          if (data?.remeras && data.remeras.length > 0) {
-            setRemeras(deduplicateRemeras(data.remeras));
-          } else {
-            setRemeras(deduplicateRemeras(OFFICIAL_REMERAS));
-          }
-        } catch {
+        if (remerasRes?.remeras && remerasRes.remeras.length > 0) {
+          setRemeras(deduplicateRemeras(remerasRes.remeras));
+        } else {
           setRemeras(deduplicateRemeras(OFFICIAL_REMERAS));
         }
 
-        // 2. Obtener colecciones
-        const { data: collectionsData, error: collError } = await supabase
-          .from('tango_collections')
-          .select('*')
-          .order('name', { ascending: true });
-
-        if (collError || !collectionsData || collectionsData.length === 0) {
-          setCollections(OFFICIAL_COLLECTIONS);
+        if (collectionsRes?.data && collectionsRes.data.length > 0) {
+          setCollections(collectionsRes.data);
         } else {
-          setCollections(collectionsData);
+          setCollections(OFFICIAL_COLLECTIONS);
         }
       } catch (err) {
         console.error('Error general cargando catálogo:', err);
+        setRemeras(deduplicateRemeras(OFFICIAL_REMERAS));
+        setCollections(OFFICIAL_COLLECTIONS);
       } finally {
         setLoading(false);
       }
@@ -396,6 +394,8 @@ export default function HomePage() {
                     <img
                       src={displayImage}
                       alt={item.title}
+                      loading="lazy"
+                      decoding="async"
                       className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                     />
 
@@ -539,6 +539,8 @@ export default function HomePage() {
                 <img
                   src={activeCollectionModal.avatar_url}
                   alt={activeCollectionModal.name}
+                  loading="lazy"
+                  decoding="async"
                   className="w-full h-full object-cover"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-zinc-900 to-transparent" />
@@ -592,6 +594,8 @@ export default function HomePage() {
                 <img
                   src={getRemeraImageForColor(checkoutRemera, selectedColor)}
                   alt={checkoutRemera.title}
+                  loading="lazy"
+                  decoding="async"
                   className="w-12 h-12 rounded-lg object-cover border border-zinc-800"
                 />
                 <div>
