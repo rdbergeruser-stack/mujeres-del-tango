@@ -3,7 +3,8 @@
 import React, { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { Remera, Collection, Profile } from '@/types/database';
-import { formatCurrency, buildWhatsAppLink, extractUsername } from '@/lib/utils';
+import { formatCurrency, buildWhatsAppLink, extractUsername, formatDetailedAddress, parseDetailedAddress, getEmptyAddress, AddressData } from '@/lib/utils';
+import AddressForm from '@/components/AddressForm';
 import {
   Package,
   ShoppingBag,
@@ -68,7 +69,7 @@ export default function AdminPage() {
   const [clientFullName, setClientFullName] = useState('');
   const [clientUsername, setClientUsername] = useState('');
   const [clientPhone, setClientPhone] = useState('');
-  const [clientAddress, setClientAddress] = useState('');
+  const [clientAddressData, setClientAddressData] = useState<AddressData>(getEmptyAddress());
   const [clientTempPass, setClientTempPass] = useState('123456');
   const [createdClientResult, setCreatedClientResult] = useState<any>(null);
   const [creatingClient, setCreatingClient] = useState(false);
@@ -78,7 +79,7 @@ export default function AdminPage() {
   const [editFullName, setEditFullName] = useState('');
   const [editUsername, setEditUsername] = useState('');
   const [editPhone, setEditPhone] = useState('');
-  const [editAddress, setEditAddress] = useState('');
+  const [editAddressData, setEditAddressData] = useState<AddressData>(getEmptyAddress());
   const [savingClientEdit, setSavingClientEdit] = useState(false);
 
   // Búsqueda en tablas
@@ -326,6 +327,7 @@ export default function AdminPage() {
     e.preventDefault();
     try {
       setCreatingClient(true);
+      const formattedAddress = formatDetailedAddress(clientAddressData);
       const res = await fetch('/api/admin/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -333,7 +335,8 @@ export default function AdminPage() {
           full_name: clientFullName,
           username: clientUsername,
           phone: clientPhone,
-          address: clientAddress,
+          address: formattedAddress,
+          detailed_address: clientAddressData,
           temp_password: clientTempPass,
         }),
       });
@@ -345,7 +348,7 @@ export default function AdminPage() {
       setClientFullName('');
       setClientUsername('');
       setClientPhone('');
-      setClientAddress('');
+      setClientAddressData(getEmptyAddress());
       await loadData();
     } catch (err: any) {
       alert(err.message || 'Error al registrar cliente');
@@ -359,7 +362,7 @@ export default function AdminPage() {
     setEditFullName(c.full_name || '');
     setEditUsername(extractUsername(c.email));
     setEditPhone(c.phone || '');
-    setEditAddress(c.address || '');
+    setEditAddressData(parseDetailedAddress(c.address));
   };
 
   const handleSaveClientEdit = async (e: React.FormEvent) => {
@@ -368,6 +371,7 @@ export default function AdminPage() {
 
     try {
       setSavingClientEdit(true);
+      const formattedAddress = formatDetailedAddress(editAddressData);
       const res = await fetch('/api/admin/users', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -376,7 +380,8 @@ export default function AdminPage() {
           full_name: editFullName,
           username: editUsername,
           phone: editPhone,
-          address: editAddress,
+          address: formattedAddress,
+          detailed_address: editAddressData,
         }),
       });
 
@@ -1054,14 +1059,11 @@ export default function AdminPage() {
                   />
                 </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-zinc-700 mb-1">Dirección de entrega:</label>
-                  <input
-                    type="text"
-                    placeholder="Calle, número, ciudad"
-                    value={clientAddress}
-                    onChange={(e) => setClientAddress(e.target.value)}
-                    className="w-full p-2 rounded-lg border border-zinc-300 text-xs text-zinc-900"
+                <div className="sm:col-span-2">
+                  <AddressForm
+                    value={clientAddressData}
+                    onChange={setClientAddressData}
+                    compact
                   />
                 </div>
 
@@ -1237,13 +1239,11 @@ export default function AdminPage() {
                   />
                 </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-zinc-700 mb-1">Dirección de entrega:</label>
-                  <input
-                    type="text"
-                    value={editAddress}
-                    onChange={(e) => setEditAddress(e.target.value)}
-                    className="w-full p-2 rounded-lg border border-zinc-300 text-xs text-zinc-900"
+                <div className="pt-1">
+                  <AddressForm
+                    value={editAddressData}
+                    onChange={setEditAddressData}
+                    compact
                   />
                 </div>
 

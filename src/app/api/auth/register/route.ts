@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { usernameToInternalEmail } from '@/lib/utils';
+import { usernameToInternalEmail, formatDetailedAddress } from '@/lib/utils';
 
 // POST /api/auth/register - Registro público por NOMBRE DE USUARIO (sin emails ni spam)
 export async function POST(req: NextRequest) {
   try {
     const adminClient = createAdminClient();
     const body = await req.json();
-    let { username, password, full_name, phone, address } = body;
+    let { username, password, full_name, phone, address, detailed_address } = body;
 
     if (!username || !username.trim()) {
       return NextResponse.json(
@@ -21,6 +21,10 @@ export async function POST(req: NextRequest) {
         { error: 'La contraseña debe tener al menos 6 caracteres' },
         { status: 400 }
       );
+    }
+
+    if (detailed_address && !address) {
+      address = formatDetailedAddress(detailed_address);
     }
 
     const cleanUsername = username
@@ -51,6 +55,7 @@ export async function POST(req: NextRequest) {
         full_name: full_name?.trim() || cleanUsername,
         phone: phone || '',
         address: address || '',
+        detailed_address: detailed_address || null,
         must_change_password: false,
         role: 'user',
       },

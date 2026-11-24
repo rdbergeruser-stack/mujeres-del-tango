@@ -4,7 +4,8 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Remera, Collection, Profile } from '@/types/database';
-import { formatCurrency, buildWhatsAppLink } from '@/lib/utils';
+import { formatCurrency, buildWhatsAppLink, formatDetailedAddress, parseDetailedAddress, getEmptyAddress, AddressData } from '@/lib/utils';
+import AddressForm from '@/components/AddressForm';
 import {
   Search,
   SlidersHorizontal,
@@ -44,6 +45,7 @@ export default function HomePage() {
   const [quantity, setQuantity] = useState<number>(1);
   const [deliveryType, setDeliveryType] = useState<'envio' | 'retiro'>('envio');
   const [shippingAddress, setShippingAddress] = useState<string>('');
+  const [shippingAddressData, setShippingAddressData] = useState<AddressData>(getEmptyAddress());
   const [referenceCode, setReferenceCode] = useState<string>('');
   const [orderNotes, setOrderNotes] = useState<string>('');
   const [submittingOrder, setSubmittingOrder] = useState<boolean>(false);
@@ -74,7 +76,9 @@ export default function HomePage() {
             .single();
           if (prof) {
             setUserProfile(prof as Profile);
-            setShippingAddress((prof as any).address || '');
+            const addr = (prof as any).address || '';
+            setShippingAddress(addr);
+            setShippingAddressData(parseDetailedAddress(addr));
           }
         }
 
@@ -132,6 +136,10 @@ export default function HomePage() {
     setReferenceCode('');
     setOrderNotes('');
     setOrderSuccess(null);
+    if (userProfile?.address) {
+      setShippingAddress(userProfile.address);
+      setShippingAddressData(parseDetailedAddress(userProfile.address));
+    }
   };
 
   const handleCopy = (text: string, type: 'alias' | 'cbu') => {
@@ -152,6 +160,15 @@ export default function HomePage() {
       return;
     }
 
+    if (deliveryType === 'envio' && (!shippingAddressData.street.trim() || !shippingAddressData.number.trim())) {
+      alert('Por favor completá al menos la calle y el número para el envío.');
+      return;
+    }
+
+    const finalShippingAddress = deliveryType === 'envio'
+      ? (formatDetailedAddress(shippingAddressData) || shippingAddress)
+      : null;
+
     try {
       setSubmittingOrder(true);
       const res = await fetch('/api/notify-payment', {
@@ -163,7 +180,7 @@ export default function HomePage() {
           selected_color: selectedColor,
           quantity,
           delivery_type: deliveryType,
-          shipping_address: deliveryType === 'envio' ? shippingAddress : null,
+          shipping_address: finalShippingAddress,
           reference_code: referenceCode,
           notes: orderNotes,
         }),
@@ -615,14 +632,15 @@ export default function HomePage() {
                   </div>
 
                   {deliveryType === 'envio' && (
-                    <div className="mt-2">
-                      <input
-                        type="text"
-                        required={deliveryType === 'envio'}
-                        placeholder="Dirección completa de entrega"
-                        value={shippingAddress}
-                        onChange={(e) => setShippingAddress(e.target.value)}
-                        className="w-full p-2 rounded-lg border border-zinc-300 text-xs text-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900"
+                    <div className="mt-3">
+                      <AddressForm
+                        value={shippingAddressData}
+                        onChange={(data) => {
+                          setShippingAddressData(data);
+                          setShippingAddress(formatDetailedAddress(data));
+                        }}
+                        required
+                        compact
                       />
                     </div>
                   )}

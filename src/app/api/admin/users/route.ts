@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
-import { buildWhatsAppLink, usernameToInternalEmail, extractUsername } from '@/lib/utils';
+import { buildWhatsAppLink, usernameToInternalEmail, extractUsername, formatDetailedAddress } from '@/lib/utils';
 
 async function checkAdmin() {
   const supabase = await createClient();
@@ -48,10 +48,14 @@ export async function POST(req: NextRequest) {
 
     const adminClient = createAdminClient();
     const body = await req.json();
-    let { full_name, username, phone, address, temp_password = '123456' } = body;
+    let { full_name, username, phone, address, detailed_address, temp_password = '123456' } = body;
 
     if (!full_name || !full_name.trim()) {
       return NextResponse.json({ error: 'El nombre completo es requerido' }, { status: 400 });
+    }
+
+    if (detailed_address && !address) {
+      address = formatDetailedAddress(detailed_address);
     }
 
     let cleanUsername = username?.trim().toLowerCase();
@@ -140,10 +144,14 @@ export async function PUT(req: NextRequest) {
 
     const adminClient = createAdminClient();
     const body = await req.json();
-    const { userId, full_name, username, phone, address, role } = body;
+    let { userId, full_name, username, phone, address, detailed_address, role } = body;
 
     if (!userId) {
       return NextResponse.json({ error: 'userId es requerido' }, { status: 400 });
+    }
+
+    if (detailed_address && !address) {
+      address = formatDetailedAddress(detailed_address);
     }
 
     const updateFields: any = {};

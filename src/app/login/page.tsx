@@ -3,7 +3,8 @@
 import React, { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { usernameToInternalEmail } from '@/lib/utils';
+import { usernameToInternalEmail, formatDetailedAddress, getEmptyAddress, AddressData } from '@/lib/utils';
+import AddressForm from '@/components/AddressForm';
 import { LogIn, UserPlus, AlertCircle } from 'lucide-react';
 
 function LoginForm() {
@@ -26,7 +27,7 @@ function LoginForm() {
   const [regUsername, setRegUsername] = useState('');
   const [regPassword, setRegPassword] = useState('');
   const [regPhone, setRegPhone] = useState('');
-  const [regAddress, setRegAddress] = useState('');
+  const [regAddressData, setRegAddressData] = useState<AddressData>(getEmptyAddress());
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -82,6 +83,7 @@ function LoginForm() {
 
     try {
       const cleanUser = regUsername.trim().toLowerCase().replace(/[^a-z0-9._-]/g, '');
+      const formattedAddress = formatDetailedAddress(regAddressData);
 
       const res = await fetch('/api/auth/register', {
         method: 'POST',
@@ -91,7 +93,8 @@ function LoginForm() {
           username: cleanUser,
           password: regPassword,
           phone: regPhone,
-          address: regAddress,
+          address: formattedAddress,
+          detailed_address: regAddressData,
         }),
       });
 
@@ -266,15 +269,10 @@ function LoginForm() {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-zinc-700 mb-1">
-                Dirección para Envíos
-              </label>
-              <input
-                type="text"
-                placeholder="Calle, número, ciudad"
-                value={regAddress}
-                onChange={(e) => setRegAddress(e.target.value)}
-                className="w-full p-2 rounded-lg border border-zinc-300 text-sm text-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900"
+              <AddressForm
+                value={regAddressData}
+                onChange={setRegAddressData}
+                compact
               />
             </div>
 
