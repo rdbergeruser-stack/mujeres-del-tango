@@ -85,9 +85,9 @@ export default function AdminPage() {
   // Búsqueda en tablas
   const [searchClient, setSearchClient] = useState('');
 
-  const quickCategories = ['Oversize', 'Corte Clásico', 'Edición Especial', 'Musculosas'];
+  const quickCategories = ['Edición Pop Art', 'Pioneras del Tango', 'Compositoras', 'Cantantes', 'Directoras & Músicas', 'Grandes Voces', 'Frases Célebres', 'Bailarinas'];
   const allSizes = ['S', 'M', 'L', 'XL', 'XXL'];
-  const allColors = ['Negro', 'Blanco Crudo', 'Bordó', 'Gris Melange', 'Azul Noche'];
+  const allColors = ['Blanco', 'Negro', 'Amarillo', 'Bordó', 'Celeste'];
 
   const loadData = async () => {
     try {

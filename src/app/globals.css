@@ -3,29 +3,43 @@
 @tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #18181b; /* zinc-900 */
+  --background: #09090b;
+  --foreground: #fafafa;
 }
 
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   min-height: 100vh;
 }
 
-/* Scrollbar limpia y neutral */
+/* Custom brand gradients and utilities */
+.text-tango-gradient {
+  background: linear-gradient(135deg, #FF00FF 0%, #199DD0 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.bg-tango-gradient {
+  background: linear-gradient(135deg, #FF00FF 0%, #199DD0 100%);
+}
+
+.border-tango-gradient {
+  border-image: linear-gradient(135deg, #FF00FF 0%, #199DD0 100%) 1;
+}
+
+/* Scrollbar estilizada con colores de la marca */
 ::-webkit-scrollbar {
   width: 7px;
   height: 7px;
 }
 ::-webkit-scrollbar-track {
-  background: #f4f4f5;
+  background: #18181b;
 }
 ::-webkit-scrollbar-thumb {
-  background: #d4d4d8;
+  background: #3f3f46;
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #a1a1aa;
+  background: #199DD0;
 }

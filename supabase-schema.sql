@@ -271,34 +271,54 @@ CREATE POLICY "Storage: administradores pueden eliminar imágenes tango"
   USING (bucket_id = 'tango-remeras-images' AND public.tango_is_admin());
 
 
--- 9. DATOS SEMILLA (HOMENAJES Y REMERAS DE EJEMPLO)
+-- 9. DATOS SEMILLA (COLECCIONES Y REMERAS OFICIALES)
 INSERT INTO public.tango_collections (name, bio, instagram, avatar_url)
 VALUES
   (
-    'Homenaje a Tita Merello',
-    'Actriz, cantante y mito popular argentino. Pionera del tango con una voz inconfundible y letras llenas de carácter, picardía y coraje.',
+    'Tita Merello',
+    'Cantante, actriz y símbolo indiscutido de la cultura popular argentina. Dueña de un estilo inconfundible y una voz que desafió las convenciones de su época.',
     '@mujeresdeltango',
-    'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80'
+    '/remeras/tita-popart-blanca.jpg'
   ),
   (
-    'Eladia Blázquez - Poesía Urbana',
-    'Poetisa, pianista y compositora excelsa. Renovó la poética del tango con himnos eternos como "Honrar la vida" y "El corazón al sur".',
+    'Paquita Bernardo',
+    'La primera mujer bandoneonista profesional de la historia del tango (1900-1925). Audaz, virtuosa y popular, derribó la hegemonía del instrumento.',
     '@mujeresdeltango',
-    'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=600&q=80'
+    '/remeras/paquita-bernardo-blanca.jpg'
   ),
   (
-    'Ada Falcón - Misterio & Pasión',
-    'La emperatriz del tango de los años 30. Voz dramática, personalidad magnética y un mito que trascendió generaciones.',
+    'Eloísa D''Herbil',
+    'La primera mujer compositora de tangos (1842-1943), con más de 100 obras. Dama aristocrática que venció la prohibición del tango en su medio social.',
     '@mujeresdeltango',
-    'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=600&q=80'
+    '/remeras/baronesa-eloisa-negra.jpg'
   ),
   (
-    'Nelly Omar - La Voz Gardeliana',
-    'Cantora nacional de fuerza inquebrantable y fidelidad a sus raíces criollas y milongueras.',
+    'Rosita Quiroga',
+    'Cantante y compositora (1896-1984), primera mujer que cantó tangos en la radiofonía argentina. De estilo reo y pionera en llevar el tango a Japón.',
     '@mujeresdeltango',
-    'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=600&q=80'
+    '/remeras/rosita-quiroga-blanca.jpg'
+  ),
+  (
+    'Fermina Maristany',
+    'Pianista, acordeonista, bandoneonista y directora de orquesta (1897-1985). Una música arrolladora que conquistó Barracas y los escenarios porteños.',
+    '@mujeresdeltango',
+    '/remeras/fermina-maristany-negra.jpg'
+  ),
+  (
+    'Nina Miranda',
+    'Una de las grandes voces del Río de la Plata (1925-2012). Brilló en la época dorada con Donato Racciatti: "Su interpretación tenía algo que no enseñan en los conservatorios: ALMA".',
+    '@mujeresdeltango',
+    '/remeras/nina-miranda-blanca.jpg'
+  ),
+  (
+    'María Nieves',
+    'Emblemática bailarina, milonguera y coreógrafa (1934-2026), referente indiscutida consagrada con el Día de la Bailarina de Tango (6 de septiembre).',
+    '@mujeresdeltango',
+    '/remeras/maria-nieves-blanca.jpg'
   )
-ON CONFLICT (name) DO NOTHING;
+ON CONFLICT (name) DO UPDATE SET
+  bio = EXCLUDED.bio,
+  avatar_url = EXCLUDED.avatar_url;
 
 INSERT INTO public.tango_remeras (
   title,
@@ -314,55 +334,127 @@ INSERT INTO public.tango_remeras (
   is_active
 ) VALUES
   (
-    'Remera Oversize "Se dice de mí" - Tita Merello',
-    'Confeccionada en 100% algodón peinado 24/1 premium de tacto ultra suave. Estampa serigráfica artesanal al agua con ilustración vintage de Tita. Cuello redondo cerrado reforzado y calce oversize amplio.',
-    28500.00,
-    'Oversize',
-    'Homenaje a Tita Merello',
+    'Tita Merello — Cuadrantes Pop Art',
+    'Diseño Pop Art en 4 cuadrantes estilo Andy Warhol con retratos de la gran Tita Merello (1904-2002). Disponible en remera blanca y negra.',
+    28000.00,
+    'Edición Pop Art',
+    'Tita Merello',
     ARRAY['S', 'M', 'L', 'XL', 'XXL'],
-    ARRAY['Negro', 'Blanco Crudo', 'Bordó'],
-    15,
-    'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=800&q=80',
-    ARRAY['https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?auto=format&fit=crop&w=800&q=80'],
+    ARRAY['Blanco', 'Negro'],
+    50,
+    '/remeras/tita-popart-blanca.jpg',
+    ARRAY['/remeras/tita-popart-blanca.jpg', '/remeras/tita-popart-negra.jpg'],
     true
   ),
   (
-    'Remera Clásica "Honrar la Vida" - Eladia Blázquez',
-    'Remera de corte clásico entallado en algodón peinado jersey 24/1. Tipografía tipográfica serigrafiada en dorado mate con estrofa histórica de Eladia. Costuras dobles reforzadas en cuello y mangas.',
-    26000.00,
-    'Corte Clásico',
-    'Eladia Blázquez - Poesía Urbana',
-    ARRAY['S', 'M', 'L', 'XL'],
-    ARRAY['Bordó', 'Negro', 'Gris Melange'],
-    12,
-    'https://images.unsplash.com/photo-1583743814966-8936f5b7be1a?auto=format&fit=crop&w=800&q=80',
-    ARRAY['https://images.unsplash.com/photo-1618354691373-d851c5c3a990?auto=format&fit=crop&w=800&q=80'],
+    'Paquita Bernardo — La Bandoneonista Hereje',
+    'Homenaje a Paquita Bernardo (1900-1925), la primera mujer en tocar profesionalmente el bandoneón en Buenos Aires, derribando los prejuicios de su época con valentía y virtuosismo.',
+    28000.00,
+    'Pioneras del Tango',
+    'Paquita Bernardo',
+    ARRAY['S', 'M', 'L', 'XL', 'XXL'],
+    ARRAY['Blanco'],
+    40,
+    '/remeras/paquita-bernardo-blanca.jpg',
+    ARRAY['/remeras/paquita-bernardo-blanca.jpg'],
     true
   ),
   (
-    'Remera "Yo no sé qué me han hecho tus ojos" - Ada Falcón',
-    'Edición especial coleccionable. Algodón con lavado vintage pre-encogido. Retrato grabado al estilo linograbado porteño en tintas ecológicas. Muy suave y de caída pesada.',
-    31000.00,
+    'La Baronesa Eloísa D''Herbil de Silva',
+    'Homenaje a la primera mujer compositora de tangos en la historia (1842-1943), con más de 100 obras compuestas. Dama aristocrática que desafió los mandatos de su clase social.',
+    28000.00,
+    'Compositoras',
+    'Eloísa D''Herbil',
+    ARRAY['S', 'M', 'L', 'XL', 'XXL'],
+    ARRAY['Negro'],
+    35,
+    '/remeras/baronesa-eloisa-negra.jpg',
+    ARRAY['/remeras/baronesa-eloisa-negra.jpg'],
+    true
+  ),
+  (
+    'Rosita Quiroga — Primera Voz en Radio',
+    'Pionera absoluta (1896-1984), primera mujer en cantar tangos en la radiofonía argentina, de estilo reo y arrabalero con gran proyección internacional.',
+    28000.00,
+    'Cantantes',
+    'Rosita Quiroga',
+    ARRAY['S', 'M', 'L', 'XL', 'XXL'],
+    ARRAY['Blanco'],
+    30,
+    '/remeras/rosita-quiroga-blanca.jpg',
+    ARRAY['/remeras/rosita-quiroga-blanca.jpg'],
+    true
+  ),
+  (
+    'Fermina "La Negra" Maristany — Directora de Orquesta',
+    'Pianista, acordeonista, bandoneonista y directora de orquesta (1897-1985). Una música arrolladora que conquistó Barracas y los escenarios porteños.',
+    28000.00,
+    'Directoras & Músicas',
+    'Fermina Maristany',
+    ARRAY['S', 'M', 'L', 'XL', 'XXL'],
+    ARRAY['Negro'],
+    30,
+    '/remeras/fermina-maristany-negra.jpg',
+    ARRAY['/remeras/fermina-maristany-negra.jpg'],
+    true
+  ),
+  (
+    'Nina Miranda — Alma de Conservatorio',
+    '"Su interpretación tenía algo que no enseñan en los conservatorios: ALMA" (1925-2012). Brilló en la época dorada con Donato Racciatti y Lucio Demare.',
+    28000.00,
+    'Grandes Voces',
+    'Nina Miranda',
+    ARRAY['S', 'M', 'L', 'XL', 'XXL'],
+    ARRAY['Blanco', 'Negro'],
+    45,
+    '/remeras/nina-miranda-blanca.jpg',
+    ARRAY['/remeras/nina-miranda-blanca.jpg', '/remeras/nina-miranda-negra.jpg'],
+    true
+  ),
+  (
+    'Tita Merello — Sabiduría Popular',
+    'Retrato de Tita con sus frases más recordadas: "Me hice un vestido de prepotente para pelear la vida...", "Al machismo no lo conozco... Yo no elegí sino que la vida me ofreció algo y eso es lo que pude ser".',
+    28000.00,
+    'Frases Célebres',
+    'Tita Merello',
+    ARRAY['S', 'M', 'L', 'XL', 'XXL'],
+    ARRAY['Blanco'],
+    40,
+    '/remeras/tita-frases-blanca.jpg',
+    ARRAY['/remeras/tita-frases-blanca.jpg'],
+    true
+  ),
+  (
+    'Tita Merello — Muchacha, hacete el Papanicolau',
+    'Diseño pop art de Tita Merello junto a su perro con su histórica frase de salud comunitaria y cuidado para todas las mujeres: "Muchacha, hacete el papanicolau".',
+    28000.00,
     'Edición Especial',
-    'Ada Falcón - Misterio & Pasión',
+    'Tita Merello',
     ARRAY['S', 'M', 'L', 'XL', 'XXL'],
-    ARRAY['Negro', 'Blanco Crudo'],
-    8,
-    'https://images.unsplash.com/photo-1576566588028-4147f3842f27?auto=format&fit=crop&w=800&q=80',
-    ARRAY['https://images.unsplash.com/photo-1562157873-818bc0726f68?auto=format&fit=crop&w=800&q=80'],
+    ARRAY['Blanco', 'Amarillo'],
+    50,
+    '/remeras/tita-papanicolau-blanca.jpg',
+    ARRAY['/remeras/tita-papanicolau-blanca.jpg', '/remeras/tita-papanicolau-amarilla.jpg'],
     true
   ),
   (
-    'Musculosa Rib Milonguera - Nelly Omar',
-    'Musculosa tipo musculosa morley de algodón y elastano premium. Calce al cuerpo con estampa mínima sutil en pecho del fileteado porteño y la firma de Nelly Omar.',
-    22500.00,
-    'Musculosas',
-    'Nelly Omar - La Voz Gardeliana',
-    ARRAY['S', 'M', 'L'],
-    ARRAY['Negro', 'Bordó'],
-    10,
-    'https://images.unsplash.com/photo-1503342394128-c104d54dba01?auto=format&fit=crop&w=800&q=80',
-    ARRAY[]::TEXT[],
+    'María Nieves — Día de la Bailarina de Tango',
+    'Emblemática bailarina, milonguera y coreógrafa (1934-2026), consagrada por el Día de la Bailarina de Tango (6 de septiembre). "Cuando se toma una pareja de tango, son dos columnas vertebrales que se hacen una".',
+    28000.00,
+    'Bailarinas',
+    'María Nieves',
+    ARRAY['S', 'M', 'L', 'XL', 'XXL'],
+    ARRAY['Blanco', 'Negro'],
+    45,
+    '/remeras/maria-nieves-blanca.jpg',
+    ARRAY['/remeras/maria-nieves-blanca.jpg', '/remeras/maria-nieves-negra.jpg'],
     true
   )
-ON CONFLICT DO NOTHING;
+ON CONFLICT (title) DO UPDATE SET
+  description = EXCLUDED.description,
+  price = EXCLUDED.price,
+  category = EXCLUDED.category,
+  collection_name = EXCLUDED.collection_name,
+  colors = EXCLUDED.colors,
+  image_url = EXCLUDED.image_url,
+  gallery_urls = EXCLUDED.gallery_urls;

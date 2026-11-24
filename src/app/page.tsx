@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Remera, Collection, Profile } from '@/types/database';
 import { formatCurrency, buildWhatsAppLink, formatDetailedAddress, parseDetailedAddress, getEmptyAddress, AddressData } from '@/lib/utils';
+import { OFFICIAL_REMERAS, OFFICIAL_COLLECTIONS } from '@/lib/constants';
 import AddressForm from '@/components/AddressForm';
 import {
   Search,
@@ -16,15 +17,18 @@ import {
   X,
   CreditCard,
   Truck,
-  MapPin
+  MapPin,
+  Sparkles,
+  ChevronRight,
+  Heart
 } from 'lucide-react';
 
 export default function HomePage() {
   const router = useRouter();
   const supabase = createClient();
 
-  const [remeras, setRemeras] = useState<Remera[]>([]);
-  const [collections, setCollections] = useState<Collection[]>([]);
+  const [remeras, setRemeras] = useState<Remera[]>(OFFICIAL_REMERAS);
+  const [collections, setCollections] = useState<Collection[]>(OFFICIAL_COLLECTIONS);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [userProfile, setUserProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -35,7 +39,10 @@ export default function HomePage() {
   const [selectedSizeFilter, setSelectedSizeFilter] = useState<string>('Todos');
   const [searchQuery, setSearchQuery] = useState<string>('');
 
-  // Modal de Artista / Colección
+  // Previsualización de color por tarjeta
+  const [cardSelectedColor, setCardSelectedColor] = useState<Record<string, string>>({});
+
+  // Modal Colección
   const [activeCollectionModal, setActiveCollectionModal] = useState<Collection | null>(null);
 
   // Modal de Compra
@@ -88,18 +95,24 @@ export default function HomePage() {
           .eq('is_active', true)
           .order('created_at', { ascending: false });
 
-        if (remerasError) console.error('Error cargando remeras:', remerasError);
-        else setRemeras(remerasData || []);
+        if (remerasError || !remerasData || remerasData.length === 0) {
+          setRemeras(OFFICIAL_REMERAS);
+        } else {
+          setRemeras(remerasData);
+        }
 
         const { data: collectionsData, error: collError } = await supabase
           .from('tango_collections')
           .select('*')
           .order('name', { ascending: true });
 
-        if (collError) console.error('Error cargando colecciones:', collError);
-        else setCollections(collectionsData || []);
+        if (collError || !collectionsData || collectionsData.length === 0) {
+          setCollections(OFFICIAL_COLLECTIONS);
+        } else {
+          setCollections(collectionsData);
+        }
       } catch (err) {
-        console.error('Error general:', err);
+        console.error('Error general cargando catálogo:', err);
       } finally {
         setLoading(false);
       }
@@ -124,14 +137,28 @@ export default function HomePage() {
     return matchesCategory && matchesCollection && matchesSize && matchesQuery;
   });
 
-  const handleOpenCheckout = (remera: Remera) => {
+  const getRemeraImageForColor = (item: Remera, color?: string): string => {
+    const activeColor = color || cardSelectedColor[item.id] || item.colors[0];
+    if (activeColor?.toLowerCase().includes('negro')) {
+      const blackImg = item.gallery_urls?.find(u => u.toLowerCase().includes('negra') || u.toLowerCase().includes('negro'));
+      if (blackImg) return blackImg;
+    }
+    if (activeColor?.toLowerCase().includes('amarill')) {
+      const yellowImg = item.gallery_urls?.find(u => u.toLowerCase().includes('amarill'));
+      if (yellowImg) return yellowImg;
+    }
+    return item.image_url || '/images/hero-banner.jpg';
+  };
+
+  const handleOpenCheckout = (remera: Remera, initialColor?: string) => {
     if (!currentUser) {
       router.push('/login?redirect=/');
       return;
     }
+    const chosenColor = initialColor || cardSelectedColor[remera.id] || remera.colors[0] || 'Blanco';
     setCheckoutRemera(remera);
     setSelectedSize(remera.sizes[0] || 'M');
-    setSelectedColor(remera.colors[0] || 'Negro');
+    setSelectedColor(chosenColor);
     setQuantity(1);
     setReferenceCode('');
     setOrderNotes('');
@@ -200,155 +227,137 @@ export default function HomePage() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-50 pb-20">
-      {/* HERO SECTION NEUTRAL */}
-      <section className="bg-white border-b border-zinc-200 py-12 sm:py-16 text-zinc-900">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="inline-flex items-center px-3 py-1 rounded-full bg-zinc-100 text-zinc-700 text-xs font-medium mb-4">
-            Catálogo Oficial de Remeras
+    <div className="min-h-screen bg-zinc-950 text-zinc-100 pb-20 selection:bg-[#FF00FF] selection:text-white">
+      {/* HERO SECTION DE LA MARCA */}
+      <section className="relative overflow-hidden border-b border-zinc-800 bg-gradient-to-b from-zinc-900 to-zinc-950 py-16 sm:py-24 text-center">
+        {/* Glow de fondo con colores oficiales */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-gradient-to-r from-[#FF00FF]/15 via-[#9900CC]/10 to-[#199DD0]/15 blur-3xl pointer-events-none rounded-full" />
+
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-zinc-900/90 border border-zinc-700/60 text-xs font-semibold text-zinc-300 mb-6 shadow-sm">
+            <span className="w-2 h-2 rounded-full bg-[#FF00FF] animate-pulse" />
+            <span>Tienda Oficial • Remeras de Colección</span>
           </div>
 
-          <h1 className="text-3xl sm:text-5xl font-bold tracking-tight text-zinc-900 mb-4">
-            Mujeres del Tango
-          </h1>
+          <div className="flex justify-center mb-4">
+            <img
+              src="/images/logo-horizontal.png"
+              alt="Mujeres del Tango"
+              className="h-20 sm:h-28 w-auto object-contain drop-shadow-[0_4px_24px_rgba(255,0,255,0.35)]"
+            />
+          </div>
 
-          <p className="max-w-2xl mx-auto text-base text-zinc-600 leading-relaxed mb-6">
-            Remeras de diseño inspiradas en las grandes voces, letristas y figuras de la música ciudadana.
+          <p className="max-w-2xl mx-auto text-sm sm:text-base text-zinc-400 leading-relaxed mb-8">
+            Remeras de autor inspiradas en las voces, letristas, bandoneonistas y bailarinas que hicieron historia en la música ciudadana.
           </p>
 
-          <div className="flex flex-wrap items-center justify-center gap-2 text-xs text-zinc-600">
-            <span className="px-3 py-1 rounded-md bg-zinc-100 border border-zinc-200">Tita Merello</span>
-            <span className="px-3 py-1 rounded-md bg-zinc-100 border border-zinc-200">Eladia Blázquez</span>
-            <span className="px-3 py-1 rounded-md bg-zinc-100 border border-zinc-200">Ada Falcón</span>
-            <span className="px-3 py-1 rounded-md bg-zinc-100 border border-zinc-200">Nelly Omar</span>
+          {/* Chips con las figuras homenajeadas */}
+          <div className="flex flex-wrap items-center justify-center gap-2 max-w-4xl mx-auto">
+            {collections.map((coll) => (
+              <button
+                key={coll.name}
+                onClick={() => setActiveCollectionModal(coll)}
+                className="px-3 py-1 rounded-full text-xs font-medium bg-zinc-900/80 border border-zinc-800 hover:border-[#199DD0] hover:text-[#199DD0] transition-all flex items-center gap-1.5"
+              >
+                <span>{coll.name}</span>
+                <Info className="w-3 h-3 text-zinc-500" />
+              </button>
+            ))}
           </div>
         </div>
       </section>
 
       {/* FILTROS Y BUSCADOR */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
-        <div className="bg-white rounded-xl shadow-xs border border-zinc-200 p-4 space-y-4">
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6 relative z-10">
+        <div className="bg-zinc-900/90 backdrop-blur-md rounded-2xl border border-zinc-800 p-4 sm:p-5 shadow-xl space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
             {/* Buscador */}
             <div className="md:col-span-6 relative">
-              <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400" />
+              <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500" />
               <input
                 type="text"
-                placeholder="Buscar remera por nombre o estampa..."
+                placeholder="Buscar por artista (Tita, Paquita, María Nieves...) o modelo..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 rounded-lg border border-zinc-300 text-sm text-zinc-900 placeholder-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-900 focus:border-zinc-900"
+                className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-[#199DD0] transition-colors"
               />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 text-xs"
-                >
-                  Limpiar
-                </button>
-              )}
             </div>
 
-            {/* Selector de Colección */}
+            {/* Filtro Colección */}
             <div className="md:col-span-3">
               <select
                 value={selectedCollection}
                 onChange={(e) => setSelectedCollection(e.target.value)}
-                className="w-full py-2 px-3 rounded-lg border border-zinc-300 bg-white text-sm text-zinc-800 focus:outline-none focus:ring-1 focus:ring-zinc-900"
+                className="w-full py-2.5 px-3 rounded-xl bg-zinc-900 border border-zinc-800 text-xs font-medium text-zinc-200 focus:outline-none focus:border-[#199DD0]"
               >
                 <option value="Todas">Todas las Colecciones</option>
                 {collections.map((c) => (
-                  <option key={c.id} value={c.name}>
+                  <option key={c.name} value={c.name}>
                     {c.name}
                   </option>
                 ))}
               </select>
             </div>
 
-            {/* Selector de Talle */}
+            {/* Filtro Talle */}
             <div className="md:col-span-3">
               <select
                 value={selectedSizeFilter}
                 onChange={(e) => setSelectedSizeFilter(e.target.value)}
-                className="w-full py-2 px-3 rounded-lg border border-zinc-300 bg-white text-sm text-zinc-800 focus:outline-none focus:ring-1 focus:ring-zinc-900"
+                className="w-full py-2.5 px-3 rounded-xl bg-zinc-900 border border-zinc-800 text-xs font-medium text-zinc-200 focus:outline-none focus:border-[#199DD0]"
               >
                 {sizeOptions.map((sz) => (
                   <option key={sz} value={sz}>
-                    {sz === 'Todos' ? 'Cualquier Talle' : `Talle: ${sz}`}
+                    {sz === 'Todos' ? 'Todos los Talles' : `Talle ${sz}`}
                   </option>
                 ))}
               </select>
             </div>
           </div>
 
-          {/* Chips de Categorías */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 pt-1">
-            <span className="text-xs font-semibold text-zinc-500 mr-2 flex items-center gap-1">
-              <SlidersHorizontal className="w-3.5 h-3.5" />
-              Categorías:
+          {/* Categorías Pills */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 pt-1 no-scrollbar text-xs">
+            <span className="text-zinc-500 text-[11px] font-semibold uppercase shrink-0 mr-1 flex items-center gap-1">
+              <SlidersHorizontal className="w-3 h-3" />
+              <span>Categoría:</span>
             </span>
             {categories.map((cat) => (
               <button
                 key={cat}
                 onClick={() => setSelectedCategory(cat)}
-                className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
+                className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition-all font-medium ${
                   selectedCategory === cat
-                    ? 'bg-zinc-900 text-white'
-                    : 'bg-zinc-100 text-zinc-700 hover:bg-zinc-200'
+                    ? 'bg-gradient-to-r from-[#FF00FF] to-[#199DD0] text-white font-bold shadow-[0_0_12px_rgba(255,0,255,0.4)]'
+                    : 'bg-zinc-950 text-zinc-400 hover:text-white border border-zinc-800 hover:border-zinc-700'
                 }`}
               >
                 {cat}
               </button>
             ))}
           </div>
-
-          {/* Chips de Artistas */}
-          {collections.length > 0 && (
-            <div className="pt-2 border-t border-zinc-100 flex items-center gap-2 overflow-x-auto text-xs text-zinc-600">
-              <span className="font-medium text-zinc-500">Colecciones:</span>
-              {collections.map((coll) => (
-                <button
-                  key={coll.id}
-                  onClick={() => setActiveCollectionModal(coll)}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-zinc-100 hover:bg-zinc-200 text-zinc-800 transition-colors font-medium"
-                >
-                  <span>{coll.name}</span>
-                  <Info className="w-3.5 h-3.5 text-zinc-500" />
-                </button>
-              ))}
-            </div>
-          )}
         </div>
       </section>
 
       {/* CATÁLOGO DE REMERAS */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
-        <div className="flex items-center justify-between mb-6">
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-12">
+        <div className="flex items-center justify-between mb-8 border-b border-zinc-800 pb-4">
           <div>
-            <h2 className="text-xl sm:text-2xl font-bold text-zinc-900">
-              Catálogo de Remeras
+            <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight flex items-center gap-2">
+              <span>Remeras Oficiales</span>
+              <span className="text-xs px-2.5 py-0.5 rounded-full bg-zinc-900 border border-zinc-800 text-[#199DD0] font-mono">
+                {filteredRemeras.length} modelos
+              </span>
             </h2>
-            <p className="text-xs text-zinc-500 mt-0.5">
-              {filteredRemeras.length} producto{filteredRemeras.length === 1 ? '' : 's'} disponible{filteredRemeras.length === 1 ? '' : 's'}
+            <p className="text-xs text-zinc-400 mt-1">
+              Elegí tu modelo, talle y color. Transferí y Maris te prepara el pedido con envío inmediato.
             </p>
           </div>
         </div>
 
-        {loading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {[1, 2, 3, 4].map((n) => (
-              <div key={n} className="bg-white rounded-xl p-4 border border-zinc-200 animate-pulse space-y-4">
-                <div className="w-full h-64 bg-zinc-200 rounded-lg" />
-                <div className="h-4 bg-zinc-200 rounded w-3/4" />
-                <div className="h-4 bg-zinc-200 rounded w-1/2" />
-              </div>
-            ))}
-          </div>
-        ) : filteredRemeras.length === 0 ? (
-          <div className="text-center py-16 bg-white rounded-xl border border-zinc-200">
-            <h3 className="text-base font-bold text-zinc-800">No encontramos remeras con esos filtros</h3>
-            <p className="text-xs text-zinc-500 mt-1 mb-4">
-              Probá restableciendo los filtros.
+        {filteredRemeras.length === 0 ? (
+          <div className="text-center py-20 bg-zinc-900/50 rounded-2xl border border-zinc-800/80 p-8">
+            <p className="text-sm text-zinc-400">
+              No encontramos remeras con los filtros seleccionados.
             </p>
             <button
               onClick={() => {
@@ -357,137 +366,186 @@ export default function HomePage() {
                 setSelectedSizeFilter('Todos');
                 setSearchQuery('');
               }}
-              className="px-4 py-2 bg-zinc-900 text-white rounded-lg text-xs font-medium hover:bg-zinc-800"
+              className="mt-4 px-4 py-2 rounded-xl bg-gradient-to-r from-[#FF00FF] to-[#199DD0] text-white text-xs font-bold"
             >
-              Ver todas las remeras
+              Restablecer Filtros
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {filteredRemeras.map((remera) => (
-              <div
-                key={remera.id}
-                className="bg-white rounded-xl overflow-hidden border border-zinc-200 flex flex-col justify-between"
-              >
-                <div className="relative w-full h-72 bg-zinc-100">
-                  <img
-                    src={remera.image_url || 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=800&q=80'}
-                    alt={remera.title}
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute top-2 right-2">
-                    <span className="px-2.5 py-1 rounded-md text-xs font-bold bg-zinc-900 text-white">
-                      {formatCurrency(Number(remera.price))}
-                    </span>
-                  </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+            {filteredRemeras.map((item) => {
+              const currentCardColor = cardSelectedColor[item.id] || item.colors[0] || 'Blanco';
+              const displayImage = getRemeraImageForColor(item, currentCardColor);
 
-                  <div className="absolute bottom-2 left-2">
-                    {remera.stock <= 3 && remera.stock > 0 ? (
-                      <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-zinc-900 text-white">
-                        Últimas {remera.stock} disponibles
+              return (
+                <div
+                  key={item.id}
+                  className="group bg-zinc-900/90 rounded-2xl overflow-hidden border border-zinc-800/90 hover:border-[#199DD0] transition-all duration-300 hover:shadow-[0_8px_30px_rgba(25,157,208,0.2)] flex flex-col"
+                >
+                  {/* IMAGEN MOCKUP OFICIAL */}
+                  <div className="relative aspect-square w-full bg-zinc-950 overflow-hidden">
+                    <img
+                      src={displayImage}
+                      alt={item.title}
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    />
+
+                    {/* Badge de Categoría */}
+                    <div className="absolute top-3 left-3">
+                      <span className="px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider bg-zinc-950/80 backdrop-blur-md text-[#FF00FF] border border-[#FF00FF]/30">
+                        {item.category}
                       </span>
-                    ) : remera.stock === 0 ? (
-                      <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-zinc-300 text-zinc-700">
-                        Sin stock
-                      </span>
-                    ) : (
-                      <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-white/90 text-zinc-800">
-                        Stock: {remera.stock} u.
-                      </span>
+                    </div>
+
+                    {/* Colección / Figura */}
+                    {item.collection_name && (
+                      <button
+                        onClick={() => {
+                          const coll = collections.find((c) => c.name === item.collection_name);
+                          if (coll) setActiveCollectionModal(coll);
+                        }}
+                        className="absolute bottom-3 left-3 px-2.5 py-1 rounded-md text-[10px] font-medium bg-zinc-950/80 backdrop-blur-md text-zinc-300 hover:text-white border border-zinc-800 hover:border-[#199DD0] transition-colors flex items-center gap-1"
+                      >
+                        <span>{item.collection_name}</span>
+                        <Info className="w-3 h-3 text-[#199DD0]" />
+                      </button>
                     )}
                   </div>
-                </div>
 
-                <div className="p-4 flex-1 flex flex-col justify-between">
-                  <div>
-                    {remera.collection_name && (
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-1">
-                        {remera.collection_name}
+                  {/* DETALLES */}
+                  <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
+                    <div>
+                      <h3 className="font-bold text-white text-base leading-snug group-hover:text-[#199DD0] transition-colors">
+                        {item.title}
+                      </h3>
+                      <p className="text-xs text-zinc-400 mt-1.5 line-clamp-2 leading-relaxed">
+                        {item.description}
                       </p>
-                    )}
-                    <h3 className="font-bold text-zinc-900 text-base leading-snug">
-                      {remera.title}
-                    </h3>
-                    <p className="text-xs text-zinc-500 line-clamp-2 mt-1.5 leading-relaxed">
-                      {remera.description || '100% Algodón peinado.'}
-                    </p>
+                    </div>
 
-                    <div className="mt-3 flex flex-wrap items-center gap-1">
-                      <span className="text-[10px] uppercase font-semibold text-zinc-400 mr-1">Talles:</span>
-                      {remera.sizes?.map((size) => (
-                        <span
-                          key={size}
-                          className="px-1.5 py-0.5 rounded bg-zinc-100 text-zinc-700 text-[10px] font-medium"
-                        >
-                          {size}
+                    {/* SELECTOR DE COLORES DISPONIBLES EN LA TARJETA */}
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between text-[11px] text-zinc-400">
+                        <span>Color disponible:</span>
+                        <span className="font-semibold text-zinc-300">{currentCardColor}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {item.colors.map((col) => {
+                          const isSelected = currentCardColor === col;
+                          return (
+                            <button
+                              key={col}
+                              type="button"
+                              onClick={() => {
+                                setCardSelectedColor({
+                                  ...cardSelectedColor,
+                                  [item.id]: col,
+                                });
+                              }}
+                              className={`px-2.5 py-1 rounded-md text-xs font-medium border transition-all ${
+                                isSelected
+                                  ? 'border-[#FF00FF] bg-[#FF00FF]/20 text-white font-bold'
+                                  : 'border-zinc-800 bg-zinc-950 text-zinc-400 hover:text-white'
+                              }`}
+                            >
+                              {col}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* TALLES */}
+                    <div className="flex items-center gap-1.5 pt-1 text-[11px] text-zinc-500">
+                      <span>Talles:</span>
+                      <div className="flex gap-1 font-mono text-zinc-300">
+                        {item.sizes.map((s) => (
+                          <span key={s} className="px-1.5 py-0.5 rounded bg-zinc-950 border border-zinc-800 text-[10px]">
+                            {s}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* PRECIO Y ACCIÓN */}
+                    <div className="pt-3 border-t border-zinc-800 flex items-center justify-between">
+                      <div>
+                        <span className="text-[10px] text-zinc-500 block">Precio por transferencia:</span>
+                        <span className="text-xl font-bold text-white tracking-tight">
+                          {formatCurrency(item.price)}
                         </span>
-                      ))}
+                      </div>
+
+                      {currentUser ? (
+                        <button
+                          onClick={() => handleOpenCheckout(item, currentCardColor)}
+                          className="py-2.5 px-4 rounded-xl bg-gradient-to-r from-[#FF00FF] to-[#199DD0] hover:opacity-90 text-white font-bold text-xs flex items-center gap-1.5 shadow-[0_0_15px_rgba(255,0,255,0.3)] transition-all"
+                        >
+                          <ShoppingBag className="w-3.5 h-3.5" />
+                          <span>Comprar</span>
+                        </button>
+                      ) : (
+                        <a
+                          href="/login?redirect=/"
+                          className="py-2.5 px-3.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-semibold block text-center transition-colors"
+                        >
+                          Ingresá para comprar
+                        </a>
+                      )}
                     </div>
                   </div>
-
-                  <div className="mt-5 pt-3 border-t border-zinc-100">
-                    {remera.stock === 0 ? (
-                      <button
-                        disabled
-                        className="w-full py-2 rounded-lg bg-zinc-100 text-zinc-400 text-xs font-semibold cursor-not-allowed"
-                      >
-                        Agotado
-                      </button>
-                    ) : currentUser ? (
-                      <button
-                        onClick={() => handleOpenCheckout(remera)}
-                        className="w-full py-2 px-3 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
-                      >
-                        <ShoppingBag className="w-3.5 h-3.5" />
-                        <span>Comprar / Notificar Pago</span>
-                      </button>
-                    ) : (
-                      <a
-                        href="/login?redirect=/"
-                        className="w-full py-2 px-3 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-800 text-xs font-semibold text-center block transition-colors"
-                      >
-                        Iniciá sesión para comprar
-                      </a>
-                    )}
-                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </section>
 
-      {/* MODAL ARTISTA / COLECCIÓN */}
+      {/* MODAL COLECCIÓN / HOMENAJE */}
       {activeCollectionModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-          <div className="bg-white rounded-xl max-w-md w-full overflow-hidden border border-zinc-200">
-            <div className="p-5">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] uppercase font-bold text-zinc-400">
-                  Colección / Homenaje
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="bg-zinc-900 rounded-2xl max-w-md w-full overflow-hidden border border-zinc-700 shadow-2xl">
+            {activeCollectionModal.avatar_url && (
+              <div className="h-44 w-full bg-zinc-950 overflow-hidden relative">
+                <img
+                  src={activeCollectionModal.avatar_url}
+                  alt={activeCollectionModal.name}
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-zinc-900 to-transparent" />
+              </div>
+            )}
+            <div className="p-6 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] uppercase font-bold text-[#FF00FF] tracking-wider">
+                  Figura Homenajeada
                 </span>
                 <button
                   onClick={() => setActiveCollectionModal(null)}
-                  className="p-1 rounded text-zinc-400 hover:text-zinc-600"
+                  className="p-1 rounded-lg text-zinc-400 hover:text-white bg-zinc-800"
                 >
                   <X className="w-4 h-4" />
                 </button>
               </div>
-              <h3 className="text-xl font-bold text-zinc-900 mb-2">
+
+              <h3 className="text-2xl font-bold text-white">
                 {activeCollectionModal.name}
               </h3>
-              <p className="text-xs text-zinc-600 leading-relaxed">
-                {activeCollectionModal.bio || 'Homenaje a una destacada figura de nuestra cultura.'}
+
+              <p className="text-xs text-zinc-300 leading-relaxed">
+                {activeCollectionModal.bio}
               </p>
-              <div className="mt-5 flex justify-end">
+
+              <div className="pt-4 flex justify-between items-center border-t border-zinc-800">
+                <span className="text-xs text-zinc-500">{activeCollectionModal.instagram}</span>
                 <button
                   onClick={() => {
                     setSelectedCollection(activeCollectionModal.name);
                     setActiveCollectionModal(null);
                   }}
-                  className="px-3 py-1.5 rounded-lg bg-zinc-900 text-white text-xs font-medium hover:bg-zinc-800"
+                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#FF00FF] to-[#199DD0] text-white text-xs font-bold"
                 >
-                  Filtrar remeras de esta serie
+                  Ver sus remeras
                 </button>
               </div>
             </div>
@@ -495,57 +553,62 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* MODAL DE CHECKOUT */}
+      {/* MODAL CHECKOUT & TRANSFERENCIA */}
       {checkoutRemera && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 overflow-y-auto">
-          <div className="bg-white rounded-2xl max-w-lg w-full my-8 overflow-hidden border border-zinc-200">
-            <div className="bg-zinc-900 text-white p-5 relative">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md overflow-y-auto">
+          <div className="bg-zinc-900 rounded-2xl max-w-lg w-full overflow-hidden border border-zinc-700 shadow-2xl my-8">
+            {/* Header Modal */}
+            <div className="p-5 border-b border-zinc-800 flex items-center justify-between bg-zinc-950">
+              <div className="flex items-center gap-3">
+                <img
+                  src={getRemeraImageForColor(checkoutRemera, selectedColor)}
+                  alt={checkoutRemera.title}
+                  className="w-12 h-12 rounded-lg object-cover border border-zinc-800"
+                />
+                <div>
+                  <h4 className="font-bold text-white text-sm">
+                    {checkoutRemera.title}
+                  </h4>
+                  <p className="text-xs text-[#FF00FF] font-semibold">
+                    {formatCurrency(checkoutRemera.price * quantity)}
+                  </p>
+                </div>
+              </div>
               <button
                 onClick={() => setCheckoutRemera(null)}
-                className="absolute top-4 right-4 p-1 rounded text-zinc-400 hover:text-white"
+                className="p-1.5 rounded-lg text-zinc-400 hover:text-white bg-zinc-900"
               >
-                <X className="w-4 h-4" />
+                <X className="w-5 h-5" />
               </button>
-              <span className="text-[10px] uppercase font-bold text-zinc-400">
-                Pago por Transferencia
-              </span>
-              <h3 className="text-lg font-bold mt-0.5">
-                {checkoutRemera.title}
-              </h3>
-              <p className="text-sm font-semibold text-zinc-300 mt-1">
-                Total: {formatCurrency(Number(checkoutRemera.price) * quantity)}
-              </p>
             </div>
 
             {orderSuccess ? (
-              <div className="p-6 text-center space-y-4">
-                <div className="w-12 h-12 mx-auto rounded-full bg-zinc-100 text-zinc-800 flex items-center justify-center">
-                  <CheckCircle2 className="w-6 h-6" />
+              <div className="p-6 space-y-4 text-center">
+                <div className="w-14 h-14 bg-gradient-to-r from-[#FF00FF] to-[#199DD0] rounded-full flex items-center justify-center mx-auto text-white shadow-[0_0_20px_rgba(255,0,255,0.4)]">
+                  <CheckCircle2 className="w-8 h-8" />
                 </div>
-                <div>
-                  <h4 className="text-lg font-bold text-zinc-900">
-                    Pedido Registrado
-                  </h4>
-                  <p className="text-xs text-zinc-500 mt-1 max-w-sm mx-auto">
-                    Maris verificará tu transferencia y te confirmará la preparación del pedido.
-                  </p>
-                </div>
+                <h3 className="text-xl font-bold text-white">¡Aviso de Compra Enviado!</h3>
+                <p className="text-xs text-zinc-300">
+                  Registramos tu pedido correctamente. Maris verificará la transferencia y preparará tu remera.
+                </p>
 
-                <div className="p-3 bg-zinc-50 rounded-lg text-left text-xs text-zinc-700 space-y-1 border border-zinc-200">
-                  <p><strong>Remera:</strong> {checkoutRemera.title} (Talle {selectedSize})</p>
-                  <p><strong>Comprobante informado:</strong> {referenceCode}</p>
-                  <p><strong>Entrega:</strong> {deliveryType === 'envio' ? shippingAddress : 'Punto de Retiro'}</p>
+                <div className="bg-zinc-950 p-4 rounded-xl border border-zinc-800 text-xs text-left space-y-1.5 text-zinc-300">
+                  <p><strong>Comprobante:</strong> <span className="font-mono text-[#199DD0]">{referenceCode}</span></p>
+                  <p><strong>Modelo:</strong> {checkoutRemera.title}</p>
+                  <p><strong>Talle:</strong> {selectedSize} | <strong>Color:</strong> {selectedColor}</p>
+                  <p><strong>Total:</strong> {formatCurrency(checkoutRemera.price * quantity)}</p>
+                  <p><strong>Entrega:</strong> {deliveryType === 'envio' ? (shippingAddress || formatDetailedAddress(shippingAddressData)) : 'Punto de Retiro'}</p>
                 </div>
 
                 <div className="space-y-2 pt-2">
                   <a
                     href={buildWhatsAppLink(
-                      '5491100000000',
-                      `Hola Maris, acabo de realizar la compra de la remera '${checkoutRemera.title}' (Talle ${selectedSize}). Mi comprobante de pago es: ${referenceCode}.`
+                      '5493435439216',
+                      `Hola Maris, acabo de realizar la compra de la remera '${checkoutRemera.title}' (Talle ${selectedSize}, Color ${selectedColor}). Mi comprobante de pago es: ${referenceCode}.`
                     )}
                     target="_blank"
                     rel="noreferrer"
-                    className="w-full py-2.5 px-4 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-semibold flex items-center justify-center gap-2"
+                    className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-[#FF00FF] to-[#199DD0] text-white text-xs font-bold flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(255,0,255,0.4)]"
                   >
                     <span>Notificar a Maris por WhatsApp</span>
                   </a>
@@ -555,7 +618,7 @@ export default function HomePage() {
                       setCheckoutRemera(null);
                       router.push('/mis-compras');
                     }}
-                    className="w-full py-2 px-4 rounded-lg border border-zinc-200 text-zinc-700 text-xs font-medium hover:bg-zinc-50"
+                    className="w-full py-2.5 px-4 rounded-xl bg-zinc-800 text-zinc-300 text-xs font-medium hover:bg-zinc-700"
                   >
                     Ver mis pedidos
                   </button>
@@ -563,15 +626,16 @@ export default function HomePage() {
               </div>
             ) : (
               <form onSubmit={handleSubmitOrder} className="p-5 space-y-4">
+                {/* Talle y Color */}
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-bold text-zinc-700 mb-1">
+                    <label className="block text-xs font-bold text-zinc-300 mb-1">
                       Talle:
                     </label>
                     <select
                       value={selectedSize}
                       onChange={(e) => setSelectedSize(e.target.value)}
-                      className="w-full py-2 px-2.5 rounded-lg border border-zinc-300 text-xs text-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900"
+                      className="w-full py-2 px-3 rounded-xl bg-zinc-950 border border-zinc-800 text-xs text-white focus:outline-none focus:border-[#199DD0]"
                     >
                       {checkoutRemera.sizes.map((sz) => (
                         <option key={sz} value={sz}>
@@ -582,13 +646,13 @@ export default function HomePage() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-zinc-700 mb-1">
+                    <label className="block text-xs font-bold text-zinc-300 mb-1">
                       Color:
                     </label>
                     <select
                       value={selectedColor}
                       onChange={(e) => setSelectedColor(e.target.value)}
-                      className="w-full py-2 px-2.5 rounded-lg border border-zinc-300 text-xs text-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900"
+                      className="w-full py-2 px-3 rounded-xl bg-zinc-950 border border-zinc-800 text-xs text-white focus:outline-none focus:border-[#199DD0]"
                     >
                       {checkoutRemera.colors.map((col) => (
                         <option key={col} value={col}>
@@ -599,35 +663,36 @@ export default function HomePage() {
                   </div>
                 </div>
 
+                {/* Modalidad de entrega */}
                 <div>
-                  <label className="block text-xs font-bold text-zinc-700 mb-1">
+                  <label className="block text-xs font-bold text-zinc-300 mb-1">
                     Modalidad de entrega:
                   </label>
                   <div className="grid grid-cols-2 gap-2">
                     <button
                       type="button"
                       onClick={() => setDeliveryType('envio')}
-                      className={`p-2 rounded-lg border text-left flex items-center gap-1.5 text-xs font-medium ${
+                      className={`p-2.5 rounded-xl border text-left flex items-center gap-2 text-xs font-semibold ${
                         deliveryType === 'envio'
-                          ? 'border-zinc-900 bg-zinc-100 text-zinc-900 font-bold'
-                          : 'border-zinc-200 text-zinc-600'
+                          ? 'border-[#FF00FF] bg-[#FF00FF]/15 text-white'
+                          : 'border-zinc-800 bg-zinc-950 text-zinc-400'
                       }`}
                     >
-                      <Truck className="w-3.5 h-3.5" />
-                      <span>Envío</span>
+                      <Truck className="w-4 h-4 text-[#FF00FF]" />
+                      <span>Envío a Domicilio</span>
                     </button>
 
                     <button
                       type="button"
                       onClick={() => setDeliveryType('retiro')}
-                      className={`p-2 rounded-lg border text-left flex items-center gap-1.5 text-xs font-medium ${
+                      className={`p-2.5 rounded-xl border text-left flex items-center gap-2 text-xs font-semibold ${
                         deliveryType === 'retiro'
-                          ? 'border-zinc-900 bg-zinc-100 text-zinc-900 font-bold'
-                          : 'border-zinc-200 text-zinc-600'
+                          ? 'border-[#199DD0] bg-[#199DD0]/15 text-white'
+                          : 'border-zinc-800 bg-zinc-950 text-zinc-400'
                       }`}
                     >
-                      <MapPin className="w-3.5 h-3.5" />
-                      <span>Retiro</span>
+                      <MapPin className="w-4 h-4 text-[#199DD0]" />
+                      <span>Punto de Retiro</span>
                     </button>
                   </div>
 
@@ -647,79 +712,83 @@ export default function HomePage() {
                 </div>
 
                 {/* Datos bancarios */}
-                <div className="p-3.5 rounded-lg bg-zinc-50 border border-zinc-200 space-y-2 text-xs text-zinc-700">
-                  <div className="flex items-center gap-1.5 font-bold text-zinc-900">
-                    <CreditCard className="w-3.5 h-3.5" />
+                <div className="p-4 rounded-xl bg-zinc-950 border border-zinc-800 space-y-2.5 text-xs text-zinc-300">
+                  <div className="flex items-center gap-1.5 font-bold text-white">
+                    <CreditCard className="w-4 h-4 text-[#FF00FF]" />
                     <span>Datos Bancarios para Transferencia:</span>
                   </div>
                   <p><strong>Titular:</strong> {bankHolder}</p>
                   <p><strong>Entidad:</strong> {bankName}</p>
 
-                  <div className="flex items-center justify-between bg-white p-2 rounded border border-zinc-200">
-                    <div>
-                      <span className="text-[10px] text-zinc-400 block">Alias:</span>
-                      <span className="font-mono font-bold text-zinc-900">{bankAlias}</span>
-                    </div>
+                  <div className="flex items-center justify-between bg-zinc-900 p-2.5 rounded-lg border border-zinc-800">
+                    <span className="font-mono text-zinc-300">Alias: <strong>{bankAlias}</strong></span>
                     <button
                       type="button"
                       onClick={() => handleCopy(bankAlias, 'alias')}
-                      className="px-2 py-1 text-[11px] font-semibold rounded bg-zinc-100 hover:bg-zinc-200 text-zinc-800 flex items-center gap-1"
+                      className="text-xs text-[#199DD0] hover:underline flex items-center gap-1"
                     >
-                      {copiedAlias ? '¡Copiado!' : 'Copiar'}
+                      <Copy className="w-3.5 h-3.5" />
+                      <span>{copiedAlias ? 'Copiado' : 'Copiar'}</span>
                     </button>
                   </div>
 
-                  <div className="flex items-center justify-between bg-white p-2 rounded border border-zinc-200">
-                    <div>
-                      <span className="text-[10px] text-zinc-400 block">CBU:</span>
-                      <span className="font-mono text-zinc-900">{bankCbu}</span>
-                    </div>
+                  <div className="flex items-center justify-between bg-zinc-900 p-2.5 rounded-lg border border-zinc-800">
+                    <span className="font-mono text-zinc-300">CBU: <strong>{bankCbu}</strong></span>
                     <button
                       type="button"
                       onClick={() => handleCopy(bankCbu, 'cbu')}
-                      className="px-2 py-1 text-[11px] font-semibold rounded bg-zinc-100 hover:bg-zinc-200 text-zinc-800 flex items-center gap-1"
+                      className="text-xs text-[#199DD0] hover:underline flex items-center gap-1"
                     >
-                      {copiedCbu ? '¡Copiado!' : 'Copiar'}
+                      <Copy className="w-3.5 h-3.5" />
+                      <span>{copiedCbu ? 'Copiado' : 'Copiar'}</span>
                     </button>
                   </div>
                 </div>
 
+                {/* Código de comprobante */}
                 <div>
-                  <label className="block text-xs font-bold text-zinc-700 mb-1">
-                    N° de Comprobante / Código de Operación <span className="text-red-500">*</span>:
+                  <label className="block text-xs font-bold text-zinc-300 mb-1">
+                    Número de Comprobante / Referencia de Transferencia <span className="text-red-400">*</span>
                   </label>
                   <input
                     type="text"
                     required
-                    placeholder="Ej: 19482746"
+                    placeholder="Ej: 123456789 o código de operación"
                     value={referenceCode}
                     onChange={(e) => setReferenceCode(e.target.value)}
-                    className="w-full p-2 rounded-lg border border-zinc-300 text-xs font-mono text-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900"
+                    className="w-full p-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-[#199DD0]"
                   />
+                  <span className="text-[10px] text-zinc-500 mt-1 block">
+                    Pegá el número de comprobante emitido por tu banco o billetera virtual.
+                  </span>
                 </div>
 
+                {/* Observaciones */}
                 <div>
-                  <label className="block text-[11px] text-zinc-500 mb-1">
-                    Aclaraciones (opcional):
+                  <label className="block text-xs font-semibold text-zinc-400 mb-1">
+                    Aclaraciones para Maris (Opcional):
                   </label>
-                  <textarea
-                    rows={2}
-                    placeholder="Timbre, depto o preferencia horaria..."
+                  <input
+                    type="text"
+                    placeholder="Ej: Si podés entregármela un sábado a la tarde"
                     value={orderNotes}
                     onChange={(e) => setOrderNotes(e.target.value)}
-                    className="w-full p-2 rounded-lg border border-zinc-300 text-xs text-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900"
+                    className="w-full p-2 rounded-xl bg-zinc-950 border border-zinc-800 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-zinc-700"
                   />
                 </div>
 
                 <button
                   type="submit"
                   disabled={submittingOrder}
-                  className="w-full py-2.5 px-4 rounded-lg bg-zinc-900 hover:bg-zinc-800 disabled:bg-zinc-400 text-white font-semibold text-xs transition-colors flex items-center justify-center gap-2"
+                  className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-[#FF00FF] to-[#199DD0] hover:opacity-95 disabled:opacity-50 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(255,0,255,0.4)] transition-all"
                 >
                   {submittingOrder ? (
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   ) : (
-                    <span>Confirmar Pedido y Enviar Comprobante</span>
+                    <>
+                      <CheckCircle2 className="w-4 h-4" />
+                      <span>Confirmar Compra ({formatCurrency(checkoutRemera.price * quantity)})</span>
+                    </>
                   )}
                 </button>
               </form>
