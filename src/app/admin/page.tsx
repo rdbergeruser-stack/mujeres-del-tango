@@ -2,10 +2,9 @@
 
 import React, { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { Remera, Collection, Profile, Order } from '@/types/database';
-import { formatCurrency, buildWhatsAppLink, sanitizeWhatsAppPhone } from '@/lib/utils';
+import { Remera, Collection, Profile } from '@/types/database';
+import { formatCurrency, buildWhatsAppLink } from '@/lib/utils';
 import {
-  ShieldCheck,
   Package,
   ShoppingBag,
   Users,
@@ -25,10 +24,7 @@ import {
   EyeOff,
   RefreshCw,
   Search,
-  Filter,
-  X,
-  Copy,
-  AlertCircle
+  X
 } from 'lucide-react';
 
 export default function AdminPage() {
@@ -88,22 +84,18 @@ export default function AdminPage() {
     try {
       setLoading(true);
 
-      // Cargar Órdenes
       const resOrders = await fetch('/api/admin/orders');
       const dataOrders = await resOrders.json();
       if (dataOrders.orders) setOrders(dataOrders.orders);
 
-      // Cargar Remeras
       const resRemeras = await fetch('/api/admin/remeras');
       const dataRemeras = await resRemeras.json();
       if (dataRemeras.remeras) setRemeras(dataRemeras.remeras);
 
-      // Cargar Colecciones
       const resColl = await fetch('/api/admin/collections');
       const dataColl = await resColl.json();
       if (dataColl.collections) setCollections(dataColl.collections);
 
-      // Cargar Clientes
       const resClients = await fetch('/api/admin/users');
       const dataClients = await resClients.json();
       if (dataClients.profiles) setClients(dataClients.profiles);
@@ -118,12 +110,10 @@ export default function AdminPage() {
     loadData();
   }, []);
 
-  // FILTRADO DE ÓRDENES POR PERÍODO Y ESTADO
+  // FILTRADO DE ÓRDENES
   const filteredOrders = orders.filter((ord) => {
-    // Filtro por Estado
     const matchesStatus = orderStatusFilter === 'todos' || ord.status === orderStatusFilter;
 
-    // Filtro por Período
     const orderDate = new Date(ord.created_at);
     const now = new Date();
     const currentMonth = now.getMonth();
@@ -141,22 +131,19 @@ export default function AdminPage() {
     return matchesStatus && matchesPeriod;
   });
 
-  // MÉTRICAS FINANCIERAS
   const approvedOrders = filteredOrders.filter((o) => o.status === 'approved' || o.status === 'delivered');
   const totalRevenue = approvedOrders.reduce((sum, o) => sum + Number(o.total_price || 0), 0);
   const totalUnitsSold = approvedOrders.reduce((sum, o) => sum + Number(o.quantity || 1), 0);
   const pendingOrdersCount = filteredOrders.filter((o) => o.status === 'pending').length;
 
-  // Remera más vendida
   const salesCountByRemera: { [title: string]: number } = {};
   approvedOrders.forEach((o) => {
-    const title = o.remera?.title || 'Remera Tango';
+    const title = o.remera?.title || 'Remera';
     salesCountByRemera[title] = (salesCountByRemera[title] || 0) + Number(o.quantity || 1);
   });
   const topRemeraEntry = Object.entries(salesCountByRemera).sort((a, b) => b[1] - a[1])[0];
   const topRemeraTitle = topRemeraEntry ? `${topRemeraEntry[0]} (${topRemeraEntry[1]} u.)` : 'Sin ventas aún';
 
-  // EXPORTAR A CSV / EXCEL
   const handleExportCSV = () => {
     if (filteredOrders.length === 0) {
       alert('No hay ventas para exportar en este período.');
@@ -185,13 +172,12 @@ export default function AdminPage() {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `ventas-mujeres-del-tango-${periodFilter}-${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute('download', `ventas-${periodFilter}-${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
-  // ACCIÓN DE PEDIDOS: Aprobar, Entregar, Rechazar
   const handleUpdateOrderStatus = async (orderId: string, newStatus: string, currentRemeraId: string, quantity: number) => {
     try {
       const res = await fetch('/api/admin/orders', {
@@ -203,7 +189,6 @@ export default function AdminPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Error al actualizar pedido');
 
-      // Si hay link de WhatsApp, abrirlo para enviar el mensaje listo
       if (data.whatsAppLink) {
         window.open(data.whatsAppLink, '_blank');
       }
@@ -214,7 +199,6 @@ export default function AdminPage() {
     }
   };
 
-  // GUARDAR / EDITAR REMERA
   const handleSaveRemera = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -247,7 +231,6 @@ export default function AdminPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Error al guardar remera');
 
-      // Limpiar formulario
       setEditingRemera(null);
       setRemeraTitle('');
       setRemeraPrice('28000');
@@ -257,7 +240,7 @@ export default function AdminPage() {
       setRemeraImageFile(null);
 
       await loadData();
-      alert('¡Remera guardada con éxito!');
+      alert('Remera guardada con éxito');
     } catch (err: any) {
       alert(err.message || 'Error al procesar remera');
     } finally {
@@ -276,7 +259,7 @@ export default function AdminPage() {
     setRemeraColors(r.colors || ['Negro', 'Blanco Crudo']);
     setRemeraDesc(r.description || '');
     setRemeraImageUrl(r.image_url || '');
-    window.scrollTo({ top: 400, behavior: 'smooth' });
+    window.scrollTo({ top: 350, behavior: 'smooth' });
   };
 
   const handleToggleActiveRemera = async (r: Remera) => {
@@ -293,7 +276,7 @@ export default function AdminPage() {
   };
 
   const handleDeleteRemera = async (id: string) => {
-    if (!confirm('¿Seguro que deseás eliminar esta remera del catálogo?')) return;
+    if (!confirm('¿Seguro que deseás eliminar esta remera?')) return;
     try {
       await fetch(`/api/admin/remeras?id=${id}`, { method: 'DELETE' });
       await loadData();
@@ -302,7 +285,6 @@ export default function AdminPage() {
     }
   };
 
-  // CREAR NUEVA COLECCIÓN
   const handleCreateCollection = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -332,7 +314,6 @@ export default function AdminPage() {
     }
   };
 
-  // CREAR CLIENTE ASISTIDO
   const handleCreateClient = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -365,9 +346,8 @@ export default function AdminPage() {
     }
   };
 
-  // RESETEAR CONTRASEÑA DE CLIENTE
   const handleResetClientPass = async (userId: string) => {
-    if (!confirm('¿Deseás resetear la contraseña de este cliente a "123456"?')) return;
+    if (!confirm('¿Resetear contraseña de este cliente a "123456"?')) return;
     try {
       const res = await fetch('/api/admin/users', {
         method: 'PATCH',
@@ -380,7 +360,7 @@ export default function AdminPage() {
       if (data.whatsAppLink) {
         window.open(data.whatsAppLink, '_blank');
       } else {
-        alert('Contraseña reseteada con éxito a: 123456');
+        alert('Contraseña reseteada a: 123456');
       }
     } catch (err: any) {
       alert(err.message || 'Error al resetear contraseña');
@@ -388,109 +368,102 @@ export default function AdminPage() {
   };
 
   return (
-    <div className="min-h-screen bg-stone-100 py-10 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto space-y-8">
-        {/* Cabecera del Panel */}
-        <div className="bg-stone-900 rounded-3xl p-6 sm:p-8 text-white shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border border-rose-950">
-          <div className="flex items-center gap-4">
-            <span className="w-14 h-14 rounded-2xl bg-rose-900/60 border border-rose-500/30 flex items-center justify-center text-3xl shadow-inner">
-              🌹
-            </span>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs uppercase font-bold tracking-widest text-rose-400">
-                  Panel de Maris
-                </span>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-950 text-rose-300 border border-rose-800">
-                  Administradora General
-                </span>
-              </div>
-              <h1 className="text-2xl sm:text-3xl font-serif font-bold text-white mt-0.5">
-                Mujeres del Tango · Gestión Central
-              </h1>
+    <div className="min-h-screen bg-zinc-50 py-8 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto space-y-6">
+        {/* Cabecera */}
+        <div className="bg-zinc-900 rounded-xl p-6 text-white flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs uppercase font-bold text-zinc-400">
+                Panel de Administración
+              </span>
+              <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-zinc-800 text-zinc-300">
+                Maris
+              </span>
             </div>
+            <h1 className="text-xl sm:text-2xl font-bold mt-1">
+              Mujeres del Tango · Gestión
+            </h1>
           </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              onClick={loadData}
-              title="Refrescar datos"
-              className="p-2.5 rounded-xl bg-stone-800 hover:bg-stone-700 text-stone-300 hover:text-white transition-colors"
-            >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            </button>
-          </div>
+          <button
+            onClick={loadData}
+            title="Refrescar datos"
+            className="p-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 transition-colors"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          </button>
         </div>
 
-        {/* MÉTRICAS FINANCIERAS PARA MARIS */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-white p-5 rounded-2xl shadow-sm border border-stone-200">
+        {/* MÉTRICAS FINANCIERAS */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="bg-white p-4 rounded-xl border border-zinc-200">
             <div className="flex items-center justify-between">
-              <span className="text-xs uppercase font-bold text-stone-600">Recaudación Confirmada</span>
-              <DollarSign className="w-4 h-4 text-emerald-600" />
+              <span className="text-xs font-semibold text-zinc-500">Recaudación Confirmada</span>
+              <DollarSign className="w-4 h-4 text-zinc-700" />
             </div>
-            <p className="text-2xl font-bold font-serif text-stone-900 mt-2">
+            <p className="text-xl font-bold text-zinc-900 mt-1">
               {formatCurrency(totalRevenue)}
             </p>
-            <span className="text-[11px] text-stone-600 mt-1 block">
-              {approvedOrders.length} pedido{approvedOrders.length === 1 ? '' : 's'} aprobado{approvedOrders.length === 1 ? '' : 's'}
+            <span className="text-[11px] text-zinc-500 mt-0.5 block">
+              {approvedOrders.length} pedido{approvedOrders.length === 1 ? '' : 's'}
             </span>
           </div>
 
-          <div className="bg-white p-5 rounded-2xl shadow-sm border border-stone-200">
+          <div className="bg-white p-4 rounded-xl border border-zinc-200">
             <div className="flex items-center justify-between">
-              <span className="text-xs uppercase font-bold text-stone-600">Prendas Vendidas</span>
-              <ShoppingBag className="w-4 h-4 text-rose-800" />
+              <span className="text-xs font-semibold text-zinc-500">Prendas Vendidas</span>
+              <ShoppingBag className="w-4 h-4 text-zinc-700" />
             </div>
-            <p className="text-2xl font-bold font-serif text-stone-900 mt-2">
+            <p className="text-xl font-bold text-zinc-900 mt-1">
               {totalUnitsSold} unidades
             </p>
-            <span className="text-[11px] text-stone-600 mt-1 block">
+            <span className="text-[11px] text-zinc-500 mt-0.5 block">
               En el período seleccionado
             </span>
           </div>
 
-          <div className="bg-white p-5 rounded-2xl shadow-sm border border-stone-200">
+          <div className="bg-white p-4 rounded-xl border border-zinc-200">
             <div className="flex items-center justify-between">
-              <span className="text-xs uppercase font-bold text-stone-600">Pedidos Pendientes</span>
-              <Clock className="w-4 h-4 text-amber-600" />
+              <span className="text-xs font-semibold text-zinc-500">Pedidos Pendientes</span>
+              <Clock className="w-4 h-4 text-zinc-700" />
             </div>
-            <p className="text-2xl font-bold font-serif text-amber-700 mt-2">
-              {pendingOrdersCount} por revisar
+            <p className="text-xl font-bold text-zinc-900 mt-1">
+              {pendingOrdersCount}
             </p>
-            <span className="text-[11px] text-stone-600 mt-1 block">
-              Avisos de pago a conciliar
+            <span className="text-[11px] text-zinc-500 mt-0.5 block">
+              Por conciliar
             </span>
           </div>
 
-          <div className="bg-white p-5 rounded-2xl shadow-sm border border-stone-200">
+          <div className="bg-white p-4 rounded-xl border border-zinc-200">
             <div className="flex items-center justify-between">
-              <span className="text-xs uppercase font-bold text-stone-600">Remera Más Elegida</span>
-              <TrendingUp className="w-4 h-4 text-blue-600" />
+              <span className="text-xs font-semibold text-zinc-500">Remera Más Elegida</span>
+              <TrendingUp className="w-4 h-4 text-zinc-700" />
             </div>
-            <p className="text-sm font-bold text-stone-900 mt-2 truncate" title={topRemeraTitle}>
+            <p className="text-xs font-bold text-zinc-900 mt-1 truncate" title={topRemeraTitle}>
               {topRemeraTitle}
             </p>
-            <span className="text-[11px] text-stone-600 mt-1 block">
-              Homenaje más pedido
+            <span className="text-[11px] text-zinc-500 mt-0.5 block">
+              Prenda destacada
             </span>
           </div>
         </div>
 
-        {/* NAVEGACIÓN DE PESTAÑAS */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-stone-300">
+        {/* NAVEGACIÓN */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 border-b border-zinc-200">
           <button
             onClick={() => setActiveTab('ventas')}
-            className={`px-5 py-2.5 rounded-xl text-xs uppercase tracking-wider font-bold transition-all flex items-center gap-2 whitespace-nowrap ${
+            className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 whitespace-nowrap ${
               activeTab === 'ventas'
-                ? 'bg-rose-900 text-white shadow-md'
-                : 'bg-white text-stone-600 hover:bg-stone-200'
+                ? 'bg-zinc-900 text-white'
+                : 'bg-white text-zinc-600 hover:bg-zinc-100'
             }`}
           >
-            <ShoppingBag className="w-4 h-4" />
+            <ShoppingBag className="w-3.5 h-3.5" />
             <span>Ventas y Pedidos</span>
             {pendingOrdersCount > 0 && (
-              <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] bg-amber-400 text-stone-950 font-black">
+              <span className="ml-1 px-1.5 py-0.2 rounded text-[10px] bg-zinc-200 text-zinc-900 font-bold">
                 {pendingOrdersCount}
               </span>
             )}
@@ -498,58 +471,55 @@ export default function AdminPage() {
 
           <button
             onClick={() => setActiveTab('remeras')}
-            className={`px-5 py-2.5 rounded-xl text-xs uppercase tracking-wider font-bold transition-all flex items-center gap-2 whitespace-nowrap ${
+            className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 whitespace-nowrap ${
               activeTab === 'remeras'
-                ? 'bg-rose-900 text-white shadow-md'
-                : 'bg-white text-stone-600 hover:bg-stone-200'
+                ? 'bg-zinc-900 text-white'
+                : 'bg-white text-zinc-600 hover:bg-zinc-100'
             }`}
           >
-            <Package className="w-4 h-4" />
-            <span>Cargar / Gestionar Remeras ({remeras.length})</span>
+            <Package className="w-3.5 h-3.5" />
+            <span>Remeras ({remeras.length})</span>
           </button>
 
           <button
             onClick={() => setActiveTab('clientes')}
-            className={`px-5 py-2.5 rounded-xl text-xs uppercase tracking-wider font-bold transition-all flex items-center gap-2 whitespace-nowrap ${
+            className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 whitespace-nowrap ${
               activeTab === 'clientes'
-                ? 'bg-rose-900 text-white shadow-md'
-                : 'bg-white text-stone-600 hover:bg-stone-200'
+                ? 'bg-zinc-900 text-white'
+                : 'bg-white text-zinc-600 hover:bg-zinc-100'
             }`}
           >
-            <Users className="w-4 h-4" />
-            <span>Clientes y WhatsApp ({clients.length})</span>
+            <Users className="w-3.5 h-3.5" />
+            <span>Clientes ({clients.length})</span>
           </button>
 
           <button
             onClick={() => setActiveTab('colecciones')}
-            className={`px-5 py-2.5 rounded-xl text-xs uppercase tracking-wider font-bold transition-all flex items-center gap-2 whitespace-nowrap ${
+            className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 whitespace-nowrap ${
               activeTab === 'colecciones'
-                ? 'bg-rose-900 text-white shadow-md'
-                : 'bg-white text-stone-600 hover:bg-stone-200'
+                ? 'bg-zinc-900 text-white'
+                : 'bg-white text-zinc-600 hover:bg-zinc-100'
             }`}
           >
-            <Sparkles className="w-4 h-4" />
-            <span>Colecciones y Homenajes ({collections.length})</span>
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Colecciones ({collections.length})</span>
           </button>
         </div>
 
-        {/* ========================================================================= */}
-        {/* PESTAÑA 1: VENTAS Y PEDIDOS POR WHATSAPP */}
-        {/* ========================================================================= */}
+        {/* TAB 1: VENTAS */}
         {activeTab === 'ventas' && (
-          <div className="space-y-6">
-            {/* Barra de Filtros de Ventas */}
-            <div className="bg-white p-4 rounded-2xl shadow-sm border border-stone-200 flex flex-wrap items-center justify-between gap-4">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-xs uppercase font-bold text-stone-600">Estado:</span>
+          <div className="space-y-4">
+            <div className="bg-white p-3.5 rounded-xl border border-zinc-200 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-xs font-semibold text-zinc-500">Estado:</span>
                 {['todos', 'pending', 'approved', 'delivered', 'rejected'].map((st) => (
                   <button
                     key={st}
                     onClick={() => setOrderStatusFilter(st)}
-                    className={`px-3 py-1 rounded-lg text-xs font-semibold capitalize transition-all ${
+                    className={`px-2.5 py-1 rounded text-xs font-medium capitalize ${
                       orderStatusFilter === st
-                        ? 'bg-stone-900 text-white shadow-xs'
-                        : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+                        ? 'bg-zinc-900 text-white'
+                        : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
                     }`}
                   >
                     {st === 'pending'
@@ -565,11 +535,11 @@ export default function AdminPage() {
                 ))}
               </div>
 
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
                 <select
                   value={periodFilter}
                   onChange={(e: any) => setPeriodFilter(e.target.value)}
-                  className="py-1.5 px-3 rounded-xl border border-stone-300 text-xs text-stone-800 bg-stone-50"
+                  className="py-1 px-2.5 rounded-lg border border-zinc-300 text-xs text-zinc-800 bg-white"
                 >
                   <option value="historico">Histórico Completo</option>
                   <option value="mes_actual">Este Mes</option>
@@ -578,141 +548,106 @@ export default function AdminPage() {
 
                 <button
                   onClick={handleExportCSV}
-                  className="px-3 py-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-colors"
+                  className="px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-medium flex items-center gap-1"
                 >
                   <Download className="w-3.5 h-3.5" />
-                  <span>Exportar Excel / CSV</span>
+                  <span>Exportar CSV</span>
                 </button>
               </div>
             </div>
 
-            {/* Tabla de Pedidos */}
-            <div className="bg-white rounded-3xl shadow-sm border border-stone-200 overflow-hidden">
+            <div className="bg-white rounded-xl border border-zinc-200 overflow-hidden">
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs text-stone-700">
-                  <thead className="bg-stone-100/80 text-[11px] uppercase font-bold text-stone-600 border-b border-stone-200">
+                <table className="w-full text-left text-xs text-zinc-700">
+                  <thead className="bg-zinc-50 text-[11px] uppercase font-bold text-zinc-500 border-b border-zinc-200">
                     <tr>
-                      <th className="py-3 px-4">Cliente / Contacto</th>
-                      <th className="py-3 px-4">Remera & Talle</th>
-                      <th className="py-3 px-4">Total & Entrega</th>
-                      <th className="py-3 px-4">Comprobante Pago</th>
-                      <th className="py-3 px-4">Estado</th>
-                      <th className="py-3 px-4 text-right">Acción WhatsApp</th>
+                      <th className="py-2.5 px-3">Cliente</th>
+                      <th className="py-2.5 px-3">Remera & Talle</th>
+                      <th className="py-2.5 px-3">Total & Entrega</th>
+                      <th className="py-2.5 px-3">Comprobante</th>
+                      <th className="py-2.5 px-3">Estado</th>
+                      <th className="py-2.5 px-3 text-right">Acción</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-stone-200">
+                  <tbody className="divide-y divide-zinc-200">
                     {filteredOrders.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="py-12 text-center text-stone-600">
-                          No hay pedidos registrados con estos criterios.
+                        <td colSpan={6} className="py-8 text-center text-zinc-500">
+                          No hay pedidos registrados en este filtro.
                         </td>
                       </tr>
                     ) : (
                       filteredOrders.map((ord) => {
                         const clientName = ord.profile?.full_name || 'Comprador/a';
                         const clientPhone = ord.profile?.phone || '';
-                        const remeraTitle = ord.remera?.title || 'Remera Tango';
+                        const remeraTitle = ord.remera?.title || 'Remera';
 
                         return (
-                          <tr key={ord.id} className="hover:bg-stone-50 transition-colors">
-                            {/* Cliente */}
-                            <td className="py-3.5 px-4">
-                              <p className="font-bold text-stone-900 text-sm">{clientName}</p>
-                              <p className="text-[11px] text-stone-600">{ord.profile?.email}</p>
-                              {clientPhone && (
-                                <p className="text-[11px] text-emerald-800 font-mono flex items-center gap-1 mt-0.5">
-                                  <span>WA: {clientPhone}</span>
-                                </p>
-                              )}
+                          <tr key={ord.id} className="hover:bg-zinc-50">
+                            <td className="py-3 px-3">
+                              <p className="font-bold text-zinc-900">{clientName}</p>
+                              <p className="text-[11px] text-zinc-500">{ord.profile?.email}</p>
+                              {clientPhone && <p className="text-[10px] text-zinc-400">Tel: {clientPhone}</p>}
                             </td>
 
-                            {/* Prenda */}
-                            <td className="py-3.5 px-4">
+                            <td className="py-3 px-3">
                               <div className="flex items-center gap-2">
                                 <img
                                   src={ord.remera?.image_url || 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=800&q=80'}
                                   alt=""
-                                  className="w-9 h-11 object-cover rounded-md bg-stone-100 border border-stone-200"
+                                  className="w-8 h-10 object-cover rounded bg-zinc-100"
                                 />
                                 <div>
-                                  <p className="font-semibold text-stone-900 leading-tight">{remeraTitle}</p>
-                                  <div className="flex items-center gap-2 text-[11px] text-stone-600 mt-0.5">
-                                    <span className="font-bold text-rose-800">Talle {ord.selected_size}</span>
-                                    {ord.selected_color && <span>({ord.selected_color})</span>}
-                                    <span>x{ord.quantity}</span>
-                                  </div>
+                                  <p className="font-semibold text-zinc-900">{remeraTitle}</p>
+                                  <p className="text-[11px] text-zinc-500">
+                                    Talle {ord.selected_size} {ord.selected_color ? `(${ord.selected_color})` : ''} x{ord.quantity}
+                                  </p>
                                 </div>
                               </div>
                             </td>
 
-                            {/* Total & Entrega */}
-                            <td className="py-3.5 px-4">
-                              <p className="font-bold text-stone-900">{formatCurrency(Number(ord.total_price))}</p>
-                              <p className="text-[11px] text-stone-600 mt-0.5">
-                                {ord.delivery_type === 'envio' ? `Envío: ${ord.shipping_address || 'A convenir'}` : 'Punto de Retiro'}
+                            <td className="py-3 px-3">
+                              <p className="font-bold text-zinc-900">{formatCurrency(Number(ord.total_price))}</p>
+                              <p className="text-[10px] text-zinc-500">
+                                {ord.delivery_type === 'envio' ? `Envío: ${ord.shipping_address || 'A convenir'}` : 'Retiro'}
                               </p>
-                              {ord.notes && <p className="text-[10px] text-amber-700 italic mt-0.5">"{ord.notes}"</p>}
                             </td>
 
-                            {/* Comprobante */}
-                            <td className="py-3.5 px-4">
+                            <td className="py-3 px-3">
                               {ord.payment_notification?.reference_code ? (
-                                <span className="px-2 py-1 rounded bg-stone-100 border border-stone-300 font-mono text-[11px] font-bold text-stone-800">
+                                <span className="px-1.5 py-0.5 rounded bg-zinc-100 font-mono text-[11px] font-bold text-zinc-800">
                                   #{ord.payment_notification.reference_code}
                                 </span>
                               ) : (
-                                <span className="text-[11px] text-stone-600 italic">Sin código</span>
-                              )}
-                              <p className="text-[10px] text-stone-600 mt-1">
-                                {new Date(ord.created_at).toLocaleDateString('es-AR')}
-                              </p>
-                            </td>
-
-                            {/* Estado */}
-                            <td className="py-3.5 px-4">
-                              {ord.status === 'approved' && (
-                                <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
-                                  Aprobado
-                                </span>
-                              )}
-                              {ord.status === 'delivered' && (
-                                <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800">
-                                  Entregado
-                                </span>
-                              )}
-                              {ord.status === 'pending' && (
-                                <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">
-                                  Pendiente
-                                </span>
-                              )}
-                              {ord.status === 'rejected' && (
-                                <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800">
-                                  Rechazado
-                                </span>
+                                <span className="text-zinc-400 italic text-[11px]">Sin código</span>
                               )}
                             </td>
 
-                            {/* Acciones */}
-                            <td className="py-3.5 px-4 text-right">
+                            <td className="py-3 px-3">
+                              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-zinc-100 text-zinc-800">
+                                {ord.status}
+                              </span>
+                            </td>
+
+                            <td className="py-3 px-3 text-right">
                               <div className="flex items-center justify-end gap-1.5">
                                 {ord.status === 'pending' && (
                                   <button
                                     onClick={() => handleUpdateOrderStatus(ord.id, 'approved', ord.remera_id, ord.quantity)}
-                                    title="Aprobar pago, descontar stock y avisar por WhatsApp"
-                                    className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs flex items-center gap-1 shadow-xs transition-colors"
+                                    title="Aprobar y abrir WhatsApp"
+                                    className="px-2.5 py-1 rounded bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-medium flex items-center gap-1"
                                   >
-                                    <CheckCircle2 className="w-3.5 h-3.5" />
-                                    <span>Aprobar & WhatsApp</span>
+                                    <CheckCircle2 className="w-3 h-3" />
+                                    <span>Aprobar & WA</span>
                                   </button>
                                 )}
 
                                 {ord.status === 'approved' && (
                                   <button
                                     onClick={() => handleUpdateOrderStatus(ord.id, 'delivered', ord.remera_id, ord.quantity)}
-                                    title="Marcar como entregado y avisar"
-                                    className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs flex items-center gap-1 shadow-xs transition-colors"
+                                    className="px-2.5 py-1 rounded bg-zinc-200 hover:bg-zinc-300 text-zinc-800 text-xs font-medium flex items-center gap-1"
                                   >
-                                    <Truck className="w-3.5 h-3.5" />
+                                    <Truck className="w-3 h-3" />
                                     <span>Entregar</span>
                                   </button>
                                 )}
@@ -720,10 +655,10 @@ export default function AdminPage() {
                                 {ord.status !== 'rejected' && (
                                   <button
                                     onClick={() => handleUpdateOrderStatus(ord.id, 'rejected', ord.remera_id, ord.quantity)}
-                                    title="Rechazar pago"
-                                    className="p-1.5 rounded-lg hover:bg-rose-100 text-rose-700 transition-colors"
+                                    className="p-1 rounded text-zinc-400 hover:text-red-600"
+                                    title="Rechazar"
                                   >
-                                    <XCircle className="w-4 h-4" />
+                                    <XCircle className="w-3.5 h-3.5" />
                                   </button>
                                 )}
                               </div>
@@ -739,22 +674,14 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* ========================================================================= */}
-        {/* PESTAÑA 2: CARGAR Y GESTIONAR REMERAS */}
-        {/* ========================================================================= */}
+        {/* TAB 2: REMERAS */}
         {activeTab === 'remeras' && (
-          <div className="space-y-8">
-            {/* Formulario de Alta / Edición de Remera */}
-            <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-stone-200">
-              <div className="flex items-center justify-between pb-4 mb-6 border-b border-stone-200">
-                <div>
-                  <h3 className="font-serif text-xl sm:text-2xl font-bold text-stone-900">
-                    {editingRemera ? 'Editar Remera' : 'Cargar Nueva Remera al Catálogo'}
-                  </h3>
-                  <p className="text-xs text-stone-500 mt-0.5">
-                    Definí título, medidas, precio, talle, stock y foto de la prenda.
-                  </p>
-                </div>
+          <div className="space-y-6">
+            <div className="bg-white rounded-xl p-5 border border-zinc-200">
+              <div className="flex items-center justify-between pb-3 mb-4 border-b border-zinc-200">
+                <h3 className="text-base font-bold text-zinc-900">
+                  {editingRemera ? 'Editar Remera' : 'Cargar Nueva Remera'}
+                </h3>
                 {editingRemera && (
                   <button
                     onClick={() => {
@@ -762,82 +689,65 @@ export default function AdminPage() {
                       setRemeraTitle('');
                       setRemeraPrice('28000');
                     }}
-                    className="text-xs text-rose-800 font-semibold hover:underline"
+                    className="text-xs text-zinc-500 hover:underline"
                   >
                     Cancelar Edición
                   </button>
                 )}
               </div>
 
-              <form onSubmit={handleSaveRemera} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Título */}
+              <form onSubmit={handleSaveRemera} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="md:col-span-2">
-                    <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 mb-1">
-                      Nombre de la Remera / Modelo <span className="text-rose-600">*</span>:
+                    <label className="block text-xs font-semibold text-zinc-700 mb-1">
+                      Nombre / Modelo:
                     </label>
                     <input
                       type="text"
                       required
-                      placeholder="Ej: Remera Ada Falcón - Misterio & Pasión"
+                      placeholder="Ej: Remera Tita Merello - Clásica"
                       value={remeraTitle}
                       onChange={(e) => setRemeraTitle(e.target.value)}
-                      className="w-full p-2.5 rounded-xl border border-stone-300 text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-rose-900"
+                      className="w-full p-2 rounded-lg border border-zinc-300 text-xs text-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900"
                     />
                   </div>
 
-                  {/* Categoría con Datalist y Chips rápidos */}
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 mb-1">
+                    <label className="block text-xs font-semibold text-zinc-700 mb-1">
                       Categoría:
                     </label>
                     <input
                       type="text"
-                      list="categories-list"
-                      placeholder="Ej: Corte Clásico"
+                      list="cat-list"
+                      placeholder="Corte Clásico"
                       value={remeraCategory}
                       onChange={(e) => setRemeraCategory(e.target.value)}
-                      className="w-full p-2.5 rounded-xl border border-stone-300 text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-rose-900"
+                      className="w-full p-2 rounded-lg border border-zinc-300 text-xs text-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900"
                     />
-                    <datalist id="categories-list">
+                    <datalist id="cat-list">
                       {quickCategories.map((c) => (
                         <option key={c} value={c} />
                       ))}
                     </datalist>
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {quickCategories.map((c) => (
-                        <button
-                          type="button"
-                          key={c}
-                          onClick={() => setRemeraCategory(c)}
-                          className="px-2 py-0.5 rounded text-[11px] bg-stone-100 hover:bg-stone-200 text-stone-700"
-                        >
-                          {c}
-                        </button>
-                      ))}
-                    </div>
                   </div>
 
-                  {/* Colección / Homenaje */}
                   <div>
                     <div className="flex items-center justify-between mb-1">
-                      <label className="text-xs font-bold uppercase tracking-wider text-stone-700">
-                        Colección / Homenaje:
-                      </label>
+                      <label className="text-xs font-semibold text-zinc-700">Colección:</label>
                       <button
                         type="button"
                         onClick={() => setShowNewCollectionModal(true)}
-                        className="text-[11px] text-rose-800 font-bold hover:underline"
+                        className="text-[11px] text-zinc-600 hover:underline"
                       >
-                        + Nueva Colección...
+                        + Nueva...
                       </button>
                     </div>
                     <select
                       value={remeraCollection}
                       onChange={(e) => setRemeraCollection(e.target.value)}
-                      className="w-full p-2.5 rounded-xl border border-stone-300 text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-rose-900 bg-white"
+                      className="w-full p-2 rounded-lg border border-zinc-300 text-xs text-zinc-900 bg-white"
                     >
-                      <option value="">(Sin colección asignada)</option>
+                      <option value="">(Sin colección)</option>
                       {collections.map((c) => (
                         <option key={c.id} value={c.name}>
                           {c.name}
@@ -846,11 +756,8 @@ export default function AdminPage() {
                     </select>
                   </div>
 
-                  {/* Precio y Stock */}
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 mb-1">
-                      Precio ($ ARS) <span className="text-rose-600">*</span>:
-                    </label>
+                    <label className="block text-xs font-semibold text-zinc-700 mb-1">Precio ($ ARS):</label>
                     <input
                       type="number"
                       required
@@ -858,30 +765,26 @@ export default function AdminPage() {
                       step="100"
                       value={remeraPrice}
                       onChange={(e) => setRemeraPrice(e.target.value)}
-                      className="w-full p-2.5 rounded-xl border border-stone-300 text-sm font-semibold text-stone-900 focus:outline-none focus:ring-2 focus:ring-rose-900"
+                      className="w-full p-2 rounded-lg border border-zinc-300 text-xs text-zinc-900"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 mb-1">
-                      Stock Disponible (unidades) <span className="text-rose-600">*</span>:
-                    </label>
+                    <label className="block text-xs font-semibold text-zinc-700 mb-1">Stock (unidades):</label>
                     <input
                       type="number"
                       required
                       min="0"
                       value={remeraStock}
                       onChange={(e) => setRemeraStock(e.target.value)}
-                      className="w-full p-2.5 rounded-xl border border-stone-300 text-sm font-semibold text-stone-900 focus:outline-none focus:ring-2 focus:ring-rose-900"
+                      className="w-full p-2 rounded-lg border border-zinc-300 text-xs text-zinc-900"
                     />
                   </div>
 
-                  {/* Talles Disponibles (Botones interactivos) */}
+                  {/* Talles */}
                   <div className="md:col-span-2">
-                    <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 mb-2">
-                      Talles Habilitados:
-                    </label>
-                    <div className="flex flex-wrap gap-2">
+                    <label className="block text-xs font-semibold text-zinc-700 mb-1">Talles Habilitados:</label>
+                    <div className="flex flex-wrap gap-1.5">
                       {allSizes.map((sz) => {
                         const isSelected = remeraSizes.includes(sz);
                         return (
@@ -889,63 +792,26 @@ export default function AdminPage() {
                             type="button"
                             key={sz}
                             onClick={() => {
-                              if (isSelected) {
-                                setRemeraSizes(remeraSizes.filter((s) => s !== sz));
-                              } else {
-                                setRemeraSizes([...remeraSizes, sz]);
-                              }
+                              if (isSelected) setRemeraSizes(remeraSizes.filter((s) => s !== sz));
+                              else setRemeraSizes([...remeraSizes, sz]);
                             }}
-                            className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                            className={`px-3 py-1 rounded text-xs font-medium ${
                               isSelected
-                                ? 'bg-rose-900 text-white shadow-xs'
-                                : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+                                ? 'bg-zinc-900 text-white'
+                                : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
                             }`}
                           >
-                            {isSelected ? '✓ ' : ''} Talle {sz}
+                            Talle {sz}
                           </button>
                         );
                       })}
                     </div>
                   </div>
 
-                  {/* Colores Disponibles */}
-                  <div className="md:col-span-2">
-                    <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 mb-2">
-                      Colores Disponibles:
-                    </label>
-                    <div className="flex flex-wrap gap-2">
-                      {allColors.map((col) => {
-                        const isSelected = remeraColors.includes(col);
-                        return (
-                          <button
-                            type="button"
-                            key={col}
-                            onClick={() => {
-                              if (isSelected) {
-                                setRemeraColors(remeraColors.filter((c) => c !== col));
-                              } else {
-                                setRemeraColors([...remeraColors, col]);
-                              }
-                            }}
-                            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
-                              isSelected
-                                ? 'bg-stone-900 text-white shadow-xs'
-                                : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
-                            }`}
-                          >
-                            {isSelected ? '✓ ' : ''} {col}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Foto de la Remera (Subida a Supabase Storage o URL) */}
-                  <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4 bg-stone-50 p-4 rounded-2xl border border-stone-200">
+                  {/* Foto */}
+                  <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-3 bg-zinc-50 p-3 rounded-lg border border-zinc-200">
                     <div>
-                      <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 mb-1">
-                        Subir Archivo de Foto (Storage):
-                      </label>
+                      <label className="block text-xs font-semibold text-zinc-700 mb-1">Subir Archivo de Foto:</label>
                       <input
                         type="file"
                         accept="image/*"
@@ -954,348 +820,256 @@ export default function AdminPage() {
                             setRemeraImageFile(e.target.files[0]);
                           }
                         }}
-                        className="w-full text-xs text-stone-700 file:mr-3 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-rose-900 file:text-white hover:file:bg-rose-800"
+                        className="w-full text-xs text-zinc-700 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:bg-zinc-900 file:text-white"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 mb-1">
-                        O bien pegar URL de imagen:
-                      </label>
+                      <label className="block text-xs font-semibold text-zinc-700 mb-1">O pegar URL de imagen:</label>
                       <input
                         type="url"
                         placeholder="https://..."
                         value={remeraImageUrl}
                         onChange={(e) => setRemeraImageUrl(e.target.value)}
-                        className="w-full p-2 rounded-xl border border-stone-300 text-xs text-stone-900 focus:outline-none"
+                        className="w-full p-1.5 rounded border border-zinc-300 text-xs text-zinc-900"
                       />
                     </div>
                   </div>
 
-                  {/* Descripción y Medidas */}
                   <div className="md:col-span-2">
-                    <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 mb-1">
-                      Descripción de Confección & Medidas en cm:
-                    </label>
+                    <label className="block text-xs font-semibold text-zinc-700 mb-1">Descripción:</label>
                     <textarea
-                      rows={3}
-                      placeholder="100% Algodón peinado 24/1. Talle S: 50cm ancho x 68cm largo..."
+                      rows={2}
+                      placeholder="Composición, corte y medidas en cm..."
                       value={remeraDesc}
                       onChange={(e) => setRemeraDesc(e.target.value)}
-                      className="w-full p-2.5 rounded-xl border border-stone-300 text-xs text-stone-900 focus:outline-none focus:ring-2 focus:ring-rose-900"
+                      className="w-full p-2 rounded-lg border border-zinc-300 text-xs text-zinc-900"
                     />
                   </div>
                 </div>
 
-                <div className="pt-2 flex justify-end">
+                <div className="flex justify-end pt-2">
                   <button
                     type="submit"
                     disabled={savingRemera}
-                    className="py-3 px-8 rounded-xl bg-rose-900 hover:bg-rose-800 disabled:bg-stone-400 text-white font-bold text-xs uppercase tracking-wider shadow-md transition-all flex items-center gap-2"
+                    className="py-2 px-5 rounded-lg bg-zinc-900 hover:bg-zinc-800 disabled:bg-zinc-400 text-white font-medium text-xs flex items-center gap-1.5"
                   >
-                    {savingRemera ? (
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    ) : (
-                      <>
-                        <Plus className="w-4 h-4" />
-                        <span>{editingRemera ? 'Actualizar Remera' : 'Publicar Remera'}</span>
-                      </>
-                    )}
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>{editingRemera ? 'Actualizar' : 'Guardar Remera'}</span>
                   </button>
                 </div>
               </form>
             </div>
 
-            {/* Grilla de Gestión de Remeras Existentes */}
-            <div className="space-y-4">
-              <h3 className="font-serif text-xl font-bold text-stone-900">
-                Inventario de Remeras ({remeras.length})
-              </h3>
+            {/* Grilla */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {remeras.map((rem) => (
+                <div
+                  key={rem.id}
+                  className={`bg-white rounded-xl overflow-hidden border ${
+                    rem.is_active ? 'border-zinc-200' : 'border-zinc-300 opacity-60'
+                  }`}
+                >
+                  <div className="relative h-44 bg-zinc-100">
+                    <img
+                      src={rem.image_url || 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=800&q=80'}
+                      alt=""
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute top-2 right-2">
+                      <span className="px-2 py-0.5 rounded text-xs font-bold bg-zinc-900 text-white">
+                        {formatCurrency(Number(rem.price))}
+                      </span>
+                    </div>
+                    <div className="absolute bottom-2 left-2">
+                      <span className="px-2 py-0.5 rounded text-[10px] bg-white text-zinc-800 font-medium">
+                        Stock: {rem.stock} u.
+                      </span>
+                    </div>
+                  </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {remeras.map((rem) => (
-                  <div
-                    key={rem.id}
-                    className={`bg-white rounded-2xl overflow-hidden border transition-all ${
-                      rem.is_active ? 'border-stone-200 shadow-sm' : 'border-stone-300 opacity-60 bg-stone-50'
-                    }`}
-                  >
-                    <div className="relative h-48 bg-stone-100">
-                      <img
-                        src={rem.image_url || 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=800&q=80'}
-                        alt=""
-                        className="w-full h-full object-cover"
-                      />
-                      <div className="absolute top-2 right-2">
-                        <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-stone-900/90 text-white">
-                          {formatCurrency(Number(rem.price))}
-                        </span>
-                      </div>
-                      <div className="absolute bottom-2 left-2">
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-stone-900/80 text-stone-200">
-                          Stock: {rem.stock} u.
-                        </span>
-                      </div>
+                  <div className="p-3.5 space-y-2">
+                    <div>
+                      <h4 className="font-bold text-zinc-900 text-xs leading-tight">{rem.title}</h4>
+                      <p className="text-[11px] text-zinc-500 mt-0.5">Talles: {rem.sizes?.join(', ')}</p>
                     </div>
 
-                    <div className="p-4 space-y-3">
-                      <div>
-                        {rem.collection_name && (
-                          <p className="text-[10px] font-bold uppercase text-rose-800">
-                            {rem.collection_name}
-                          </p>
-                        )}
-                        <h4 className="font-bold text-stone-900 text-sm leading-tight">{rem.title}</h4>
-                        <p className="text-[11px] text-stone-600 mt-1">Talles: {rem.sizes?.join(', ')}</p>
-                      </div>
+                    <div className="pt-2 border-t border-zinc-100 flex items-center justify-between">
+                      <button
+                        onClick={() => handleToggleActiveRemera(rem)}
+                        className={`text-xs font-medium flex items-center gap-1 ${
+                          rem.is_active ? 'text-zinc-800' : 'text-zinc-400'
+                        }`}
+                      >
+                        {rem.is_active ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                        <span>{rem.is_active ? 'Activa' : 'Pausada'}</span>
+                      </button>
 
-                      <div className="pt-2 border-t border-stone-100 flex items-center justify-between">
+                      <div className="flex items-center gap-1">
                         <button
-                          onClick={() => handleToggleActiveRemera(rem)}
-                          className={`text-xs font-semibold flex items-center gap-1 ${
-                            rem.is_active ? 'text-emerald-700' : 'text-stone-500'
-                          }`}
+                          onClick={() => handleEditClick(rem)}
+                          className="p-1 rounded text-zinc-500 hover:text-zinc-900"
                         >
-                          {rem.is_active ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
-                          <span>{rem.is_active ? 'Activa' : 'Pausada'}</span>
+                          <Edit2 className="w-3.5 h-3.5" />
                         </button>
-
-                        <div className="flex items-center gap-1">
-                          <button
-                            onClick={() => handleEditClick(rem)}
-                            className="p-1.5 rounded-lg text-stone-600 hover:text-stone-900 hover:bg-stone-100"
-                            title="Editar remera"
-                          >
-                            <Edit2 className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteRemera(rem.id)}
-                            className="p-1.5 rounded-lg text-rose-600 hover:text-rose-800 hover:bg-rose-50"
-                            title="Eliminar remera"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
+                        <button
+                          onClick={() => handleDeleteRemera(rem.id)}
+                          className="p-1 rounded text-zinc-400 hover:text-red-600"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                     </div>
                   </div>
-                ))}
-              </div>
+                </div>
+              ))}
             </div>
           </div>
         )}
 
-        {/* ========================================================================= */}
-        {/* PESTAÑA 3: CLIENTES Y GESTIÓN POR WHATSAPP */}
-        {/* ========================================================================= */}
+        {/* TAB 3: CLIENTES */}
         {activeTab === 'clientes' && (
-          <div className="space-y-8">
-            {/* Formulario de Creación Asistida */}
-            <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-stone-200">
-              <div className="pb-4 mb-6 border-b border-stone-200">
-                <span className="text-[10px] uppercase font-bold tracking-widest text-rose-800">
-                  Modelo Maris / WhatsApp
-                </span>
-                <h3 className="font-serif text-xl sm:text-2xl font-bold text-stone-900 mt-0.5">
-                  Alta Asistida de Compradora
-                </h3>
-                <p className="text-xs text-stone-500 mt-1">
-                  Maris crea la cuenta del cliente con clave provisoria ("123456") y le envía las credenciales listas por WhatsApp en 1 clic.
-                </p>
-              </div>
+          <div className="space-y-6">
+            <div className="bg-white rounded-xl p-5 border border-zinc-200">
+              <h3 className="text-base font-bold text-zinc-900 mb-1">
+                Alta Asistida de Comprador/a
+              </h3>
+              <p className="text-xs text-zinc-500 mb-4">
+                Creá la cuenta con clave temporal "123456" y enviá los datos por WhatsApp.
+              </p>
 
               {createdClientResult && (
-                <div className="mb-6 p-4 rounded-2xl bg-emerald-50 border border-emerald-200 space-y-3">
-                  <div className="flex items-center gap-2 text-emerald-900 font-bold text-xs">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                    <span>¡Cuenta creada con éxito para {createdClientResult.user?.full_name}!</span>
-                  </div>
-                  <div className="text-xs text-stone-700 bg-white p-3 rounded-xl border border-emerald-100 space-y-1">
-                    <p><strong>Email de acceso:</strong> {createdClientResult.user?.email}</p>
-                    <p><strong>Contraseña temporal:</strong> {createdClientResult.tempPassword}</p>
-                  </div>
+                <div className="mb-4 p-3 rounded-lg bg-zinc-100 border border-zinc-200 text-xs text-zinc-800 space-y-2">
+                  <p><strong>Cuenta creada:</strong> {createdClientResult.user?.email}</p>
+                  <p><strong>Clave provisoria:</strong> {createdClientResult.tempPassword}</p>
                   {createdClientResult.whatsAppLink && (
                     <a
                       href={createdClientResult.whatsAppLink}
                       target="_blank"
                       rel="noreferrer"
-                      className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs shadow-sm transition-all"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-zinc-900 text-white font-medium"
                     >
-                      <MessageCircle className="w-4 h-4" />
+                      <MessageCircle className="w-3.5 h-3.5" />
                       <span>WhatsApp - Enviar Credenciales</span>
                     </a>
                   )}
                 </div>
               )}
 
-              <form onSubmit={handleCreateClient} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <form onSubmit={handleCreateClient} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 mb-1">
-                    Nombre Completo <span className="text-rose-600">*</span>:
-                  </label>
+                  <label className="block text-xs font-semibold text-zinc-700 mb-1">Nombre Completo:</label>
                   <input
                     type="text"
                     required
-                    placeholder="Ej: Laura Martínez"
+                    placeholder="Laura Martínez"
                     value={clientFullName}
                     onChange={(e) => setClientFullName(e.target.value)}
-                    className="w-full p-2.5 rounded-xl border border-stone-300 text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-rose-900"
+                    className="w-full p-2 rounded-lg border border-zinc-300 text-xs text-zinc-900"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 mb-1">
-                    WhatsApp / Celular <span className="text-rose-600">*</span>:
-                  </label>
+                  <label className="block text-xs font-semibold text-zinc-700 mb-1">WhatsApp / Tel:</label>
                   <input
                     type="tel"
                     required
-                    placeholder="Ej: 11 4050 6070"
+                    placeholder="11 4050 6070"
                     value={clientPhone}
                     onChange={(e) => setClientPhone(e.target.value)}
-                    className="w-full p-2.5 rounded-xl border border-stone-300 text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-rose-900"
+                    className="w-full p-2 rounded-lg border border-zinc-300 text-xs text-zinc-900"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 mb-1">
-                    Correo Electrónico (opcional, se autogenera si está vacío):
-                  </label>
+                  <label className="block text-xs font-semibold text-zinc-700 mb-1">Email (opcional):</label>
                   <input
                     type="email"
-                    placeholder="laura.martinez@mujeresdeltango.com"
+                    placeholder="laura@correo.com"
                     value={clientEmail}
                     onChange={(e) => setClientEmail(e.target.value)}
-                    className="w-full p-2.5 rounded-xl border border-stone-300 text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-rose-900"
+                    className="w-full p-2 rounded-lg border border-zinc-300 text-xs text-zinc-900"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 mb-1">
-                    Dirección por defecto para envíos:
-                  </label>
+                  <label className="block text-xs font-semibold text-zinc-700 mb-1">Dirección de entrega:</label>
                   <input
                     type="text"
-                    placeholder="Av. Corrientes 1500, CABA"
+                    placeholder="Calle, número, ciudad"
                     value={clientAddress}
                     onChange={(e) => setClientAddress(e.target.value)}
-                    className="w-full p-2.5 rounded-xl border border-stone-300 text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-rose-900"
+                    className="w-full p-2 rounded-lg border border-zinc-300 text-xs text-zinc-900"
                   />
                 </div>
 
-                <div className="sm:col-span-2 pt-2 flex justify-end">
+                <div className="sm:col-span-2 flex justify-end pt-2">
                   <button
                     type="submit"
                     disabled={creatingClient}
-                    className="py-3 px-6 rounded-xl bg-rose-900 hover:bg-rose-800 disabled:bg-stone-400 text-white font-bold text-xs uppercase tracking-wider shadow-md transition-all flex items-center gap-2"
+                    className="py-2 px-5 rounded-lg bg-zinc-900 hover:bg-zinc-800 disabled:bg-zinc-400 text-white font-medium text-xs flex items-center gap-1.5"
                   >
-                    {creatingClient ? (
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    ) : (
-                      <>
-                        <Users className="w-4 h-4" />
-                        <span>Crear Cuenta & Preparar WhatsApp</span>
-                      </>
-                    )}
+                    <Users className="w-3.5 h-3.5" />
+                    <span>Crear Cuenta & WhatsApp</span>
                   </button>
                 </div>
               </form>
             </div>
 
-            {/* Listado de Clientes Registrados */}
-            <div className="bg-white rounded-3xl shadow-sm border border-stone-200 overflow-hidden">
-              <div className="p-4 border-b border-stone-200 flex items-center justify-between gap-4">
-                <h4 className="font-serif font-bold text-stone-900 text-lg">
-                  Directorio de Clientes ({clients.length})
-                </h4>
-                <div className="relative w-64">
-                  <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
+            <div className="bg-white rounded-xl border border-zinc-200 overflow-hidden">
+              <div className="p-3 border-b border-zinc-200 flex items-center justify-between">
+                <h4 className="font-bold text-zinc-900 text-sm">Directorio de Clientes ({clients.length})</h4>
+                <div className="relative w-56">
+                  <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-400" />
                   <input
                     type="text"
-                    placeholder="Buscar cliente..."
+                    placeholder="Buscar..."
                     value={searchClient}
                     onChange={(e) => setSearchClient(e.target.value)}
-                    className="w-full pl-9 pr-3 py-1.5 rounded-xl border border-stone-300 text-xs text-stone-900"
+                    className="w-full pl-8 pr-2.5 py-1 rounded border border-zinc-300 text-xs"
                   />
                 </div>
               </div>
 
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs text-stone-700">
-                  <thead className="bg-stone-100 text-[11px] uppercase font-bold text-stone-600 border-b border-stone-200">
+                <table className="w-full text-left text-xs text-zinc-700">
+                  <thead className="bg-zinc-50 text-[11px] uppercase font-bold text-zinc-500 border-b border-zinc-200">
                     <tr>
-                      <th className="py-3 px-4">Nombre</th>
-                      <th className="py-3 px-4">Email</th>
-                      <th className="py-3 px-4">WhatsApp</th>
-                      <th className="py-3 px-4">Dirección</th>
-                      <th className="py-3 px-4">Rol / Estado</th>
-                      <th className="py-3 px-4 text-right">Acciones</th>
+                      <th className="py-2.5 px-3">Nombre</th>
+                      <th className="py-2.5 px-3">Email</th>
+                      <th className="py-2.5 px-3">WhatsApp</th>
+                      <th className="py-2.5 px-3">Rol</th>
+                      <th className="py-2.5 px-3 text-right">Acciones</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-stone-200">
+                  <tbody className="divide-y divide-zinc-200">
                     {clients
                       .filter(
                         (c) =>
                           !searchClient ||
                           c.full_name?.toLowerCase().includes(searchClient.toLowerCase()) ||
-                          c.email.toLowerCase().includes(searchClient.toLowerCase()) ||
-                          c.phone?.includes(searchClient)
+                          c.email.toLowerCase().includes(searchClient.toLowerCase())
                       )
-                      .map((c) => {
-                        const whatsAppDirect = c.phone
-                          ? buildWhatsAppLink(
-                              c.phone,
-                              `¡Hola ${c.full_name}! Te saluda Maris de Mujeres del Tango 🌹 ¿Cómo estás?`
-                            )
-                          : null;
-
-                        return (
-                          <tr key={c.id} className="hover:bg-stone-50">
-                            <td className="py-3 px-4 font-bold text-stone-900">{c.full_name || 'Sin nombre'}</td>
-                            <td className="py-3 px-4">{c.email}</td>
-                            <td className="py-3 px-4 font-mono">{c.phone || '-'}</td>
-                            <td className="py-3 px-4 max-w-[200px] truncate">{c.address || '-'}</td>
-                            <td className="py-3 px-4">
-                              <span
-                                className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                                  c.role === 'admin'
-                                    ? 'bg-rose-100 text-rose-900'
-                                    : 'bg-stone-100 text-stone-700'
-                                }`}
-                              >
-                                {c.role}
-                              </span>
-                              {c.must_change_password && (
-                                <span className="ml-1 px-1.5 py-0.5 rounded text-[9px] bg-amber-100 text-amber-800">
-                                  Clave provisoria
-                                </span>
-                              )}
-                            </td>
-                            <td className="py-3 px-4 text-right">
-                              <div className="flex items-center justify-end gap-2">
-                                {whatsAppDirect && (
-                                  <a
-                                    href={whatsAppDirect}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="p-1.5 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
-                                    title="Chatear por WhatsApp"
-                                  >
-                                    <MessageCircle className="w-3.5 h-3.5" />
-                                  </a>
-                                )}
-                                <button
-                                  onClick={() => handleResetClientPass(c.id)}
-                                  className="px-2.5 py-1 rounded bg-stone-100 hover:bg-stone-200 text-stone-700 text-[11px] font-medium"
-                                  title="Resetear clave a 123456"
-                                >
-                                  Reset Clave
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
+                      .map((c) => (
+                        <tr key={c.id} className="hover:bg-zinc-50">
+                          <td className="py-2.5 px-3 font-semibold text-zinc-900">{c.full_name || 'Sin nombre'}</td>
+                          <td className="py-2.5 px-3">{c.email}</td>
+                          <td className="py-2.5 px-3 font-mono">{c.phone || '-'}</td>
+                          <td className="py-2.5 px-3">
+                            <span className="px-1.5 py-0.5 rounded text-[10px] bg-zinc-100 font-medium">
+                              {c.role}
+                            </span>
+                          </td>
+                          <td className="py-2.5 px-3 text-right">
+                            <button
+                              onClick={() => handleResetClientPass(c.id)}
+                              className="px-2 py-0.5 rounded bg-zinc-100 hover:bg-zinc-200 text-zinc-700 text-[11px]"
+                            >
+                              Reset Clave
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
                   </tbody>
                 </table>
               </div>
@@ -1303,149 +1077,76 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* ========================================================================= */}
-        {/* PESTAÑA 4: COLECCIONES Y HOMENAJES */}
-        {/* ========================================================================= */}
+        {/* TAB 4: COLECCIONES */}
         {activeTab === 'colecciones' && (
-          <div className="space-y-6">
+          <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-serif text-xl sm:text-2xl font-bold text-stone-900">
-                  Homenajes & Colecciones de Grandes Mujeres
-                </h3>
-                <p className="text-xs text-stone-500 mt-0.5">
-                  Tita Merello, Eladia Blázquez, Ada Falcón, Nelly Omar y más figuras de nuestra cultura.
-                </p>
-              </div>
-
+              <h3 className="font-bold text-zinc-900 text-base">Colecciones & Homenajes</h3>
               <button
                 onClick={() => setShowNewCollectionModal(true)}
-                className="px-4 py-2 rounded-xl bg-rose-900 hover:bg-rose-800 text-white text-xs font-bold uppercase tracking-wider shadow-sm flex items-center gap-1.5"
+                className="px-3 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-medium flex items-center gap-1"
               >
-                <Plus className="w-4 h-4" />
-                <span>Nuevo Homenaje</span>
+                <Plus className="w-3.5 h-3.5" />
+                <span>Nueva Colección</span>
               </button>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {collections.map((coll) => {
-                const count = remeras.filter((r) => r.collection_name === coll.name).length;
-
-                return (
-                  <div
-                    key={coll.id}
-                    className="bg-white rounded-2xl overflow-hidden border border-stone-200 shadow-sm flex flex-col justify-between"
-                  >
-                    <div className="relative h-44 bg-stone-900">
-                      <img
-                        src={coll.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80'}
-                        alt={coll.name}
-                        className="w-full h-full object-cover opacity-85"
-                      />
-                      <div className="absolute bottom-3 left-3 right-3 text-white">
-                        <span className="text-[10px] uppercase font-bold tracking-widest text-rose-300">
-                          {count} remera{count === 1 ? '' : 's'} en catálogo
-                        </span>
-                        <h4 className="font-serif font-bold text-lg leading-tight mt-0.5 drop-shadow">
-                          {coll.name}
-                        </h4>
-                      </div>
-                    </div>
-
-                    <div className="p-4 space-y-3 flex-1 flex flex-col justify-between">
-                      <p className="text-xs text-stone-600 line-clamp-3 leading-relaxed">
-                        {coll.bio || 'Homenaje a una destacada mujer del tango.'}
-                      </p>
-
-                      <div className="pt-2 border-t border-stone-100 flex items-center justify-between text-xs text-stone-500">
-                        <span>{coll.instagram || '@mujeresdeltango'}</span>
-                        <button
-                          onClick={async () => {
-                            if (!confirm(`¿Eliminar la colección "${coll.name}"?`)) return;
-                            await fetch(`/api/admin/collections?id=${coll.id}`, { method: 'DELETE' });
-                            await loadData();
-                          }}
-                          className="text-rose-600 hover:text-rose-800 p-1 rounded"
-                          title="Eliminar homenaje"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {collections.map((coll) => (
+                <div key={coll.id} className="bg-white rounded-xl overflow-hidden border border-zinc-200 p-4 space-y-2">
+                  <h4 className="font-bold text-zinc-900 text-sm">{coll.name}</h4>
+                  <p className="text-xs text-zinc-500 line-clamp-3">{coll.bio || 'Semblanza de la figura homenajeadas.'}</p>
+                  <div className="pt-2 border-t border-zinc-100 flex items-center justify-between text-xs text-zinc-400">
+                    <span>{coll.instagram || '@mujeresdeltango'}</span>
+                    <button
+                      onClick={async () => {
+                        if (!confirm(`¿Eliminar colección "${coll.name}"?`)) return;
+                        await fetch(`/api/admin/collections?id=${coll.id}`, { method: 'DELETE' });
+                        await loadData();
+                      }}
+                      className="text-zinc-400 hover:text-red-600 p-1"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
                   </div>
-                );
-              })}
+                </div>
+              ))}
             </div>
           </div>
         )}
 
         {/* MODAL NUEVA COLECCIÓN */}
         {showNewCollectionModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-950/70 backdrop-blur-sm">
-            <div className="bg-white rounded-3xl max-w-md w-full overflow-hidden shadow-2xl border border-stone-200 p-6 space-y-4">
-              <div className="flex items-center justify-between border-b border-stone-200 pb-3">
-                <h4 className="font-serif font-bold text-stone-900 text-lg">
-                  Agregar Nueva Colección / Homenaje
-                </h4>
-                <button
-                  onClick={() => setShowNewCollectionModal(false)}
-                  className="p-1 rounded-full text-stone-400 hover:text-stone-700"
-                >
-                  <X className="w-5 h-5" />
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+            <div className="bg-white rounded-xl max-w-md w-full p-5 space-y-3">
+              <div className="flex items-center justify-between border-b border-zinc-200 pb-2">
+                <h4 className="font-bold text-zinc-900 text-sm">Agregar Nueva Colección</h4>
+                <button onClick={() => setShowNewCollectionModal(false)}>
+                  <X className="w-4 h-4 text-zinc-400" />
                 </button>
               </div>
 
-              <form onSubmit={handleCreateCollection} className="space-y-4">
+              <form onSubmit={handleCreateCollection} className="space-y-3">
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 mb-1">
-                    Nombre de la Artista / Colección <span className="text-rose-600">*</span>:
-                  </label>
+                  <label className="block text-xs font-semibold text-zinc-700 mb-1">Nombre:</label>
                   <input
                     type="text"
                     required
-                    placeholder="Ej: Virginia Luque - La Estrella Porteña"
+                    placeholder="Virginia Luque"
                     value={newCollectionName}
                     onChange={(e) => setNewCollectionName(e.target.value)}
-                    className="w-full p-2.5 rounded-xl border border-stone-300 text-xs text-stone-900 focus:outline-none focus:ring-2 focus:ring-rose-900"
+                    className="w-full p-2 rounded-lg border border-zinc-300 text-xs"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 mb-1">
-                    Semblanza o Biografía Breve:
-                  </label>
+                  <label className="block text-xs font-semibold text-zinc-700 mb-1">Semblanza:</label>
                   <textarea
-                    rows={3}
-                    placeholder="Reseña histórica del legado de la artista..."
+                    rows={2}
+                    placeholder="Reseña breve..."
                     value={newCollectionBio}
                     onChange={(e) => setNewCollectionBio(e.target.value)}
-                    className="w-full p-2.5 rounded-xl border border-stone-300 text-xs text-stone-900 focus:outline-none focus:ring-2 focus:ring-rose-900"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 mb-1">
-                    Instagram o Redes:
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="@mujeresdeltango"
-                    value={newCollectionInstagram}
-                    onChange={(e) => setNewCollectionInstagram(e.target.value)}
-                    className="w-full p-2.5 rounded-xl border border-stone-300 text-xs text-stone-900 focus:outline-none focus:ring-2 focus:ring-rose-900"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 mb-1">
-                    URL de Foto de la Artista:
-                  </label>
-                  <input
-                    type="url"
-                    placeholder="https://..."
-                    value={newCollectionAvatar}
-                    onChange={(e) => setNewCollectionAvatar(e.target.value)}
-                    className="w-full p-2.5 rounded-xl border border-stone-300 text-xs text-stone-900 focus:outline-none focus:ring-2 focus:ring-rose-900"
+                    className="w-full p-2 rounded-lg border border-zinc-300 text-xs"
                   />
                 </div>
 
@@ -1453,15 +1154,15 @@ export default function AdminPage() {
                   <button
                     type="button"
                     onClick={() => setShowNewCollectionModal(false)}
-                    className="px-4 py-2 rounded-xl border border-stone-300 text-stone-700 text-xs font-semibold hover:bg-stone-100"
+                    className="px-3 py-1.5 rounded-lg border border-zinc-300 text-zinc-700 text-xs"
                   >
                     Cancelar
                   </button>
                   <button
                     type="submit"
-                    className="px-5 py-2 rounded-xl bg-rose-900 hover:bg-rose-800 text-white text-xs font-bold uppercase tracking-wider"
+                    className="px-4 py-1.5 rounded-lg bg-zinc-900 text-white text-xs font-medium"
                   >
-                    Guardar Homenaje
+                    Guardar
                   </button>
                 </div>
               </form>

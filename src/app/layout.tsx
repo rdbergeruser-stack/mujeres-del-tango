@@ -4,9 +4,9 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 
 export const metadata: Metadata = {
-  title: 'Mujeres del Tango | Remeras de Colección & Homenaje Porteño',
+  title: 'Mujeres del Tango | Tienda de Remeras',
   description:
-    'Tienda online oficial de Mujeres del Tango. Remeras temáticas de diseño independiente inspiradas en Tita Merello, Eladia Blázquez, Nelly Omar, Ada Falcón y más.',
+    'Tienda online de Mujeres del Tango. Venta de remeras temáticas inspiradas en figuras del tango.',
 };
 
 export default function RootLayout({
@@ -16,7 +16,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es">
-      <body className="bg-stone-50 text-stone-900 min-h-screen flex flex-col antialiased selection:bg-rose-900 selection:text-white">
+      <body className="bg-white text-zinc-900 min-h-screen flex flex-col antialiased">
         <Navbar />
         <main className="flex-1">{children}</main>
         <Footer />

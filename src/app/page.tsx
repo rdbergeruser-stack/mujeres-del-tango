@@ -8,7 +8,6 @@ import { formatCurrency, buildWhatsAppLink } from '@/lib/utils';
 import {
   Search,
   SlidersHorizontal,
-  Sparkles,
   ShoppingBag,
   CheckCircle2,
   Copy,
@@ -16,10 +15,7 @@ import {
   X,
   CreditCard,
   Truck,
-  MapPin,
-  Heart,
-  ChevronRight,
-  AlertCircle
+  MapPin
 } from 'lucide-react';
 
 export default function HomePage() {
@@ -60,14 +56,13 @@ export default function HomePage() {
   const bankAlias = process.env.NEXT_PUBLIC_BANK_ALIAS || 'mujeres.del.tango';
   const bankCbu = process.env.NEXT_PUBLIC_BANK_CBU || '0000003100012345678901';
   const bankHolder = process.env.NEXT_PUBLIC_BANK_HOLDER || 'Maris - Mujeres del Tango';
-  const bankName = process.env.NEXT_PUBLIC_BANK_NAME || 'Banco de la Nación Argentina / Mercado Pago';
+  const bankName = process.env.NEXT_PUBLIC_BANK_NAME || 'Banco Nación / Mercado Pago';
 
   useEffect(() => {
     async function loadInitialData() {
       try {
         setLoading(true);
 
-        // 1. Obtener usuario actual
         const { data: { user } } = await supabase.auth.getUser();
         setCurrentUser(user);
 
@@ -83,7 +78,6 @@ export default function HomePage() {
           }
         }
 
-        // 2. Cargar remeras activas
         const { data: remerasData, error: remerasError } = await supabase
           .from('tango_remeras')
           .select('*')
@@ -93,7 +87,6 @@ export default function HomePage() {
         if (remerasError) console.error('Error cargando remeras:', remerasError);
         else setRemeras(remerasData || []);
 
-        // 3. Cargar colecciones
         const { data: collectionsData, error: collError } = await supabase
           .from('tango_collections')
           .select('*')
@@ -111,11 +104,9 @@ export default function HomePage() {
     loadInitialData();
   }, []);
 
-  // Extraer categorías únicas
   const categories = ['Todos', ...Array.from(new Set(remeras.map((r) => r.category).filter(Boolean)))];
   const sizeOptions = ['Todos', 'S', 'M', 'L', 'XL', 'XXL'];
 
-  // Filtrar catálogo
   const filteredRemeras = remeras.filter((item) => {
     const matchesCategory = selectedCategory === 'Todos' || item.category === selectedCategory;
     const matchesCollection = selectedCollection === 'Todas' || item.collection_name === selectedCollection;
@@ -192,53 +183,49 @@ export default function HomePage() {
   };
 
   return (
-    <div className="min-h-screen bg-stone-50 pb-20">
-      {/* HERO SECTION */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-stone-900 via-stone-950 to-stone-900 text-stone-100 py-16 sm:py-24 border-b border-rose-950">
-        <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#9f1239_1px,transparent_1px)] [background-size:16px_16px]" />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
-          {/* Badge Destacado */}
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-rose-950/80 border border-rose-600/40 text-rose-300 text-xs sm:text-sm font-medium mb-6 shadow-sm">
-            <Sparkles className="w-4 h-4 text-amber-400" />
-            <span>Diseño Independiente & 100% Algodón Premium</span>
+    <div className="min-h-screen bg-zinc-50 pb-20">
+      {/* HERO SECTION NEUTRAL */}
+      <section className="bg-white border-b border-zinc-200 py-12 sm:py-16 text-zinc-900">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <div className="inline-flex items-center px-3 py-1 rounded-full bg-zinc-100 text-zinc-700 text-xs font-medium mb-4">
+            Catálogo Oficial de Remeras
           </div>
 
-          <h1 className="text-4xl sm:text-6xl lg:text-7xl font-serif font-bold tracking-tight text-white mb-6">
+          <h1 className="text-3xl sm:text-5xl font-bold tracking-tight text-zinc-900 mb-4">
             Mujeres del Tango
           </h1>
 
-          <p className="max-w-2xl mx-auto text-base sm:text-xl text-stone-300 font-light leading-relaxed mb-8">
-            Remeras de diseño independiente que rinden homenaje a las grandes voces, letristas y figuras de nuestro tango.
+          <p className="max-w-2xl mx-auto text-base text-zinc-600 leading-relaxed mb-6">
+            Remeras de diseño inspiradas en las grandes voces, letristas y figuras de la música ciudadana.
           </p>
 
-          {/* Iconos de Colección Rápida */}
-          <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4 text-xs sm:text-sm text-stone-400">
-            <span className="px-3 py-1 rounded-full bg-stone-900/80 border border-stone-800">🌹 Tita Merello</span>
-            <span className="px-3 py-1 rounded-full bg-stone-900/80 border border-stone-800">🎹 Eladia Blázquez</span>
-            <span className="px-3 py-1 rounded-full bg-stone-900/80 border border-stone-800">🖤 Ada Falcón</span>
-            <span className="px-3 py-1 rounded-full bg-stone-900/80 border border-stone-800">✨ Nelly Omar</span>
+          <div className="flex flex-wrap items-center justify-center gap-2 text-xs text-zinc-600">
+            <span className="px-3 py-1 rounded-md bg-zinc-100 border border-zinc-200">Tita Merello</span>
+            <span className="px-3 py-1 rounded-md bg-zinc-100 border border-zinc-200">Eladia Blázquez</span>
+            <span className="px-3 py-1 rounded-md bg-zinc-100 border border-zinc-200">Ada Falcón</span>
+            <span className="px-3 py-1 rounded-md bg-zinc-100 border border-zinc-200">Nelly Omar</span>
           </div>
         </div>
       </section>
 
-      {/* FILTROS DINÁMICOS & BUSCADOR */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6 relative z-20">
-        <div className="bg-white rounded-2xl shadow-xl border border-stone-200/80 p-5 space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
+      {/* FILTROS Y BUSCADOR */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
+        <div className="bg-white rounded-xl shadow-xs border border-zinc-200 p-4 space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
             {/* Buscador */}
             <div className="md:col-span-6 relative">
-              <Search className="w-5 h-5 absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400" />
+              <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400" />
               <input
                 type="text"
-                placeholder="Buscar remera por nombre, estampa o cantante..."
+                placeholder="Buscar remera por nombre o estampa..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-11 pr-4 py-2.5 rounded-xl border border-stone-300 bg-stone-50/50 text-sm text-stone-900 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-rose-900/30 focus:border-rose-900 transition-all"
+                className="w-full pl-10 pr-4 py-2 rounded-lg border border-zinc-300 text-sm text-zinc-900 placeholder-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-900 focus:border-zinc-900"
               />
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600 text-xs"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 text-xs"
                 >
                   Limpiar
                 </button>
@@ -250,7 +237,7 @@ export default function HomePage() {
               <select
                 value={selectedCollection}
                 onChange={(e) => setSelectedCollection(e.target.value)}
-                className="w-full py-2.5 px-3 rounded-xl border border-stone-300 bg-white text-sm text-stone-800 focus:outline-none focus:ring-2 focus:ring-rose-900/30 focus:border-rose-900"
+                className="w-full py-2 px-3 rounded-lg border border-zinc-300 bg-white text-sm text-zinc-800 focus:outline-none focus:ring-1 focus:ring-zinc-900"
               >
                 <option value="Todas">Todas las Colecciones</option>
                 {collections.map((c) => (
@@ -266,7 +253,7 @@ export default function HomePage() {
               <select
                 value={selectedSizeFilter}
                 onChange={(e) => setSelectedSizeFilter(e.target.value)}
-                className="w-full py-2.5 px-3 rounded-xl border border-stone-300 bg-white text-sm text-stone-800 focus:outline-none focus:ring-2 focus:ring-rose-900/30 focus:border-rose-900"
+                className="w-full py-2 px-3 rounded-lg border border-zinc-300 bg-white text-sm text-zinc-800 focus:outline-none focus:ring-1 focus:ring-zinc-900"
               >
                 {sizeOptions.map((sz) => (
                   <option key={sz} value={sz}>
@@ -278,8 +265,8 @@ export default function HomePage() {
           </div>
 
           {/* Chips de Categorías */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 pt-1 no-scrollbar">
-            <span className="text-xs font-semibold uppercase tracking-wider text-stone-600 mr-2 flex items-center gap-1">
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 pt-1">
+            <span className="text-xs font-semibold text-zinc-500 mr-2 flex items-center gap-1">
               <SlidersHorizontal className="w-3.5 h-3.5" />
               Categorías:
             </span>
@@ -287,10 +274,10 @@ export default function HomePage() {
               <button
                 key={cat}
                 onClick={() => setSelectedCategory(cat)}
-                className={`px-4 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all ${
+                className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
                   selectedCategory === cat
-                    ? 'bg-rose-900 text-white shadow-sm'
-                    : 'bg-stone-100 text-stone-700 hover:bg-stone-200'
+                    ? 'bg-zinc-900 text-white'
+                    : 'bg-zinc-100 text-zinc-700 hover:bg-zinc-200'
                 }`}
               >
                 {cat}
@@ -298,18 +285,18 @@ export default function HomePage() {
             ))}
           </div>
 
-          {/* Chips de Artistas con Modal Emergente */}
+          {/* Chips de Artistas */}
           {collections.length > 0 && (
-            <div className="pt-2 border-t border-stone-100 flex items-center gap-2 overflow-x-auto text-xs text-stone-600">
-              <span className="font-medium text-stone-600 whitespace-nowrap">Homenajes:</span>
+            <div className="pt-2 border-t border-zinc-100 flex items-center gap-2 overflow-x-auto text-xs text-zinc-600">
+              <span className="font-medium text-zinc-500">Colecciones:</span>
               {collections.map((coll) => (
                 <button
                   key={coll.id}
                   onClick={() => setActiveCollectionModal(coll)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-rose-50 text-rose-900 hover:bg-rose-100 transition-colors whitespace-nowrap font-medium"
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-zinc-100 hover:bg-zinc-200 text-zinc-800 transition-colors font-medium"
                 >
                   <span>{coll.name}</span>
-                  <Info className="w-3.5 h-3.5 text-rose-700" />
+                  <Info className="w-3.5 h-3.5 text-zinc-500" />
                 </button>
               ))}
             </div>
@@ -318,36 +305,33 @@ export default function HomePage() {
       </section>
 
       {/* CATÁLOGO DE REMERAS */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-12">
-        <div className="flex items-center justify-between mb-8">
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
+        <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-2xl sm:text-3xl font-serif font-bold text-stone-900">
-              Nuestra Colección de Remeras
+            <h2 className="text-xl sm:text-2xl font-bold text-zinc-900">
+              Catálogo de Remeras
             </h2>
-            <p className="text-sm text-stone-500 mt-1">
-              Mostrando {filteredRemeras.length} modelo{filteredRemeras.length === 1 ? '' : 's'} disponible{filteredRemeras.length === 1 ? '' : 's'}
+            <p className="text-xs text-zinc-500 mt-0.5">
+              {filteredRemeras.length} producto{filteredRemeras.length === 1 ? '' : 's'} disponible{filteredRemeras.length === 1 ? '' : 's'}
             </p>
           </div>
         </div>
 
         {loading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {[1, 2, 3, 4].map((n) => (
-              <div key={n} className="bg-white rounded-2xl p-4 shadow-sm animate-pulse space-y-4">
-                <div className="w-full h-72 bg-stone-200 rounded-xl" />
-                <div className="h-4 bg-stone-200 rounded w-3/4" />
-                <div className="h-4 bg-stone-200 rounded w-1/2" />
+              <div key={n} className="bg-white rounded-xl p-4 border border-zinc-200 animate-pulse space-y-4">
+                <div className="w-full h-64 bg-zinc-200 rounded-lg" />
+                <div className="h-4 bg-zinc-200 rounded w-3/4" />
+                <div className="h-4 bg-zinc-200 rounded w-1/2" />
               </div>
             ))}
           </div>
         ) : filteredRemeras.length === 0 ? (
-          <div className="text-center py-20 bg-white rounded-2xl border border-stone-200">
-            <div className="w-16 h-16 mx-auto rounded-full bg-stone-100 flex items-center justify-center text-3xl mb-4">
-              🥀
-            </div>
-            <h3 className="text-lg font-serif font-bold text-stone-800">No encontramos remeras con esos filtros</h3>
-            <p className="text-sm text-stone-500 max-w-md mx-auto mt-1 mb-6">
-              Probá restableciendo los filtros o buscando con otro término.
+          <div className="text-center py-16 bg-white rounded-xl border border-zinc-200">
+            <h3 className="text-base font-bold text-zinc-800">No encontramos remeras con esos filtros</h3>
+            <p className="text-xs text-zinc-500 mt-1 mb-4">
+              Probá restableciendo los filtros.
             </p>
             <button
               onClick={() => {
@@ -356,71 +340,67 @@ export default function HomePage() {
                 setSelectedSizeFilter('Todos');
                 setSearchQuery('');
               }}
-              className="px-4 py-2 bg-stone-800 text-white rounded-xl text-sm font-medium hover:bg-stone-900 transition-colors"
+              className="px-4 py-2 bg-zinc-900 text-white rounded-lg text-xs font-medium hover:bg-zinc-800"
             >
               Ver todas las remeras
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {filteredRemeras.map((remera) => (
               <div
                 key={remera.id}
-                className="group bg-white rounded-2xl overflow-hidden border border-stone-200/90 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col"
+                className="bg-white rounded-xl overflow-hidden border border-zinc-200 flex flex-col justify-between"
               >
-                {/* Imagen con Zoom Suave */}
-                <div className="relative w-full h-80 overflow-hidden bg-stone-100">
+                <div className="relative w-full h-72 bg-zinc-100">
                   <img
                     src={remera.image_url || 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=800&q=80'}
                     alt={remera.title}
-                    className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
+                    className="w-full h-full object-cover"
                   />
-                  <div className="absolute top-3 right-3">
-                    <span className="px-3 py-1 rounded-full text-xs font-bold bg-stone-900/90 text-white shadow-md">
+                  <div className="absolute top-2 right-2">
+                    <span className="px-2.5 py-1 rounded-md text-xs font-bold bg-zinc-900 text-white">
                       {formatCurrency(Number(remera.price))}
                     </span>
                   </div>
 
-                  {/* Badge de Stock */}
-                  <div className="absolute bottom-3 left-3">
+                  <div className="absolute bottom-2 left-2">
                     {remera.stock <= 3 && remera.stock > 0 ? (
-                      <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-500/90 text-stone-950 backdrop-blur-sm">
-                        ¡Últimas {remera.stock} disponibles!
+                      <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-zinc-900 text-white">
+                        Últimas {remera.stock} disponibles
                       </span>
                     ) : remera.stock === 0 ? (
-                      <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-rose-900/90 text-white">
-                        Sin stock momentáneo
+                      <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-zinc-300 text-zinc-700">
+                        Sin stock
                       </span>
                     ) : (
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-stone-900/60 text-stone-200 backdrop-blur-sm">
+                      <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-white/90 text-zinc-800">
                         Stock: {remera.stock} u.
                       </span>
                     )}
                   </div>
                 </div>
 
-                {/* Info de la Remera */}
-                <div className="p-5 flex-1 flex flex-col justify-between">
+                <div className="p-4 flex-1 flex flex-col justify-between">
                   <div>
                     {remera.collection_name && (
-                      <p className="text-[11px] font-bold uppercase tracking-wider text-rose-800 mb-1">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 mb-1">
                         {remera.collection_name}
                       </p>
                     )}
-                    <h3 className="font-serif font-bold text-stone-900 text-lg leading-snug group-hover:text-rose-900 transition-colors">
+                    <h3 className="font-bold text-zinc-900 text-base leading-snug">
                       {remera.title}
                     </h3>
-                    <p className="text-xs text-stone-500 line-clamp-2 mt-2 leading-relaxed">
-                      {remera.description || '100% Algodón peinado 24/1. Estampa serigráfica de máxima resistencia.'}
+                    <p className="text-xs text-zinc-500 line-clamp-2 mt-1.5 leading-relaxed">
+                      {remera.description || '100% Algodón peinado.'}
                     </p>
 
-                    {/* Chips de Talles */}
-                    <div className="mt-4 flex flex-wrap items-center gap-1.5">
-                      <span className="text-[10px] uppercase font-semibold text-stone-600 mr-1">Talles:</span>
+                    <div className="mt-3 flex flex-wrap items-center gap-1">
+                      <span className="text-[10px] uppercase font-semibold text-zinc-400 mr-1">Talles:</span>
                       {remera.sizes?.map((size) => (
                         <span
                           key={size}
-                          className="px-2 py-0.5 rounded bg-stone-100 text-stone-700 text-[11px] font-semibold"
+                          className="px-1.5 py-0.5 rounded bg-zinc-100 text-zinc-700 text-[10px] font-medium"
                         >
                           {size}
                         </span>
@@ -428,27 +408,26 @@ export default function HomePage() {
                     </div>
                   </div>
 
-                  {/* Botón de Compra */}
-                  <div className="mt-6 pt-4 border-t border-stone-100">
+                  <div className="mt-5 pt-3 border-t border-zinc-100">
                     {remera.stock === 0 ? (
                       <button
                         disabled
-                        className="w-full py-2.5 rounded-xl bg-stone-200 text-stone-400 text-xs font-semibold cursor-not-allowed uppercase tracking-wider"
+                        className="w-full py-2 rounded-lg bg-zinc-100 text-zinc-400 text-xs font-semibold cursor-not-allowed"
                       >
                         Agotado
                       </button>
                     ) : currentUser ? (
                       <button
                         onClick={() => handleOpenCheckout(remera)}
-                        className="w-full py-2.5 px-4 rounded-xl bg-rose-900 hover:bg-rose-800 active:scale-[0.99] text-white text-xs font-semibold shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 uppercase tracking-wider"
+                        className="w-full py-2 px-3 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
                       >
-                        <ShoppingBag className="w-4 h-4" />
+                        <ShoppingBag className="w-3.5 h-3.5" />
                         <span>Comprar / Notificar Pago</span>
                       </button>
                     ) : (
                       <a
                         href="/login?redirect=/"
-                        className="w-full py-2.5 px-4 rounded-xl bg-stone-900 hover:bg-stone-800 text-stone-100 text-xs font-semibold text-center block transition-all uppercase tracking-wider"
+                        className="w-full py-2 px-3 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-800 text-xs font-semibold text-center block transition-colors"
                       >
                         Iniciá sesión para comprar
                       </a>
@@ -461,47 +440,37 @@ export default function HomePage() {
         )}
       </section>
 
-      {/* MODAL FICHA DE ARTISTA / COLECCIÓN */}
+      {/* MODAL ARTISTA / COLECCIÓN */}
       {activeCollectionModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-950/70 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-white rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl border border-stone-200">
-            <div className="relative h-48 bg-stone-900">
-              <img
-                src={activeCollectionModal.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80'}
-                alt={activeCollectionModal.name}
-                className="w-full h-full object-cover opacity-80"
-              />
-              <button
-                onClick={() => setActiveCollectionModal(null)}
-                className="absolute top-4 right-4 p-2 rounded-full bg-stone-900/80 text-white hover:bg-stone-900 transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="p-6">
-              <span className="text-xs uppercase font-bold tracking-widest text-rose-800">
-                Homenaje Oficial
-              </span>
-              <h3 className="font-serif text-2xl font-bold text-stone-900 mt-1 mb-3">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-white rounded-xl max-w-md w-full overflow-hidden border border-zinc-200">
+            <div className="p-5">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] uppercase font-bold text-zinc-400">
+                  Colección / Homenaje
+                </span>
+                <button
+                  onClick={() => setActiveCollectionModal(null)}
+                  className="p-1 rounded text-zinc-400 hover:text-zinc-600"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <h3 className="text-xl font-bold text-zinc-900 mb-2">
                 {activeCollectionModal.name}
               </h3>
-              <p className="text-sm text-stone-600 leading-relaxed">
-                {activeCollectionModal.bio || 'Una de las grandes figuras de nuestra historia tanguera.'}
+              <p className="text-xs text-zinc-600 leading-relaxed">
+                {activeCollectionModal.bio || 'Homenaje a una destacada figura de nuestra cultura.'}
               </p>
-              {activeCollectionModal.instagram && (
-                <div className="mt-4 pt-4 border-t border-stone-100 flex items-center justify-between text-xs text-stone-500">
-                  <span>Instagram: {activeCollectionModal.instagram}</span>
-                </div>
-              )}
-              <div className="mt-6 flex justify-end">
+              <div className="mt-5 flex justify-end">
                 <button
                   onClick={() => {
                     setSelectedCollection(activeCollectionModal.name);
                     setActiveCollectionModal(null);
                   }}
-                  className="px-4 py-2 rounded-xl bg-rose-900 text-white text-xs font-semibold hover:bg-rose-800 transition-colors"
+                  className="px-3 py-1.5 rounded-lg bg-zinc-900 text-white text-xs font-medium hover:bg-zinc-800"
                 >
-                  Filtrar remeras de esta colección
+                  Filtrar remeras de esta serie
                 </button>
               </div>
             </div>
@@ -509,62 +478,59 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* MODAL DE CHECKOUT Y TRANSFERENCIA */}
+      {/* MODAL DE CHECKOUT */}
       {checkoutRemera && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-950/70 backdrop-blur-sm overflow-y-auto">
-          <div className="bg-white rounded-3xl max-w-xl w-full my-8 overflow-hidden shadow-2xl border border-stone-200">
-            {/* Encabezado */}
-            <div className="bg-stone-900 text-white p-6 relative">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 overflow-y-auto">
+          <div className="bg-white rounded-2xl max-w-lg w-full my-8 overflow-hidden border border-zinc-200">
+            <div className="bg-zinc-900 text-white p-5 relative">
               <button
                 onClick={() => setCheckoutRemera(null)}
-                className="absolute top-5 right-5 p-1.5 rounded-full bg-stone-800 hover:bg-stone-700 text-stone-300 transition-colors"
+                className="absolute top-4 right-4 p-1 rounded text-zinc-400 hover:text-white"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
-              <span className="text-[10px] uppercase font-bold tracking-widest text-rose-400">
-                Checkout por Transferencia Bancaria
+              <span className="text-[10px] uppercase font-bold text-zinc-400">
+                Pago por Transferencia
               </span>
-              <h3 className="font-serif text-xl sm:text-2xl font-bold mt-1">
+              <h3 className="text-lg font-bold mt-0.5">
                 {checkoutRemera.title}
               </h3>
-              <p className="text-rose-200 font-semibold text-lg mt-1">
-                {formatCurrency(Number(checkoutRemera.price) * quantity)}
+              <p className="text-sm font-semibold text-zinc-300 mt-1">
+                Total: {formatCurrency(Number(checkoutRemera.price) * quantity)}
               </p>
             </div>
 
             {orderSuccess ? (
-              // VISTA DE PEDIDO REGISTRADO CON ÉXITO
-              <div className="p-8 text-center space-y-6">
-                <div className="w-16 h-16 mx-auto rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center">
-                  <CheckCircle2 className="w-10 h-10" />
+              <div className="p-6 text-center space-y-4">
+                <div className="w-12 h-12 mx-auto rounded-full bg-zinc-100 text-zinc-800 flex items-center justify-center">
+                  <CheckCircle2 className="w-6 h-6" />
                 </div>
                 <div>
-                  <h4 className="font-serif text-2xl font-bold text-stone-900">
-                    ¡Aviso de Pedido Enviado!
+                  <h4 className="text-lg font-bold text-zinc-900">
+                    Pedido Registrado
                   </h4>
-                  <p className="text-sm text-stone-600 mt-2 max-w-md mx-auto leading-relaxed">
-                    Maris verificará la acreditación de tu transferencia y te confirmará la preparación de tu remera a la brevedad.
+                  <p className="text-xs text-zinc-500 mt-1 max-w-sm mx-auto">
+                    Maris verificará tu transferencia y te confirmará la preparación del pedido.
                   </p>
                 </div>
 
-                <div className="p-4 bg-stone-50 rounded-2xl border border-stone-200 text-left text-xs text-stone-700 space-y-1">
-                  <p><strong>Prenda:</strong> {checkoutRemera.title} (Talle {selectedSize})</p>
-                  <p><strong>Comprobante:</strong> {referenceCode}</p>
-                  <p><strong>Modalidad:</strong> {deliveryType === 'envio' ? `Envío a: ${shippingAddress}` : 'Retiro en punto de encuentro'}</p>
-                  <p><strong>Total:</strong> {formatCurrency(Number(checkoutRemera.price) * quantity)}</p>
+                <div className="p-3 bg-zinc-50 rounded-lg text-left text-xs text-zinc-700 space-y-1 border border-zinc-200">
+                  <p><strong>Remera:</strong> {checkoutRemera.title} (Talle {selectedSize})</p>
+                  <p><strong>Comprobante informado:</strong> {referenceCode}</p>
+                  <p><strong>Entrega:</strong> {deliveryType === 'envio' ? shippingAddress : 'Punto de Retiro'}</p>
                 </div>
 
-                <div className="space-y-3 pt-2">
+                <div className="space-y-2 pt-2">
                   <a
                     href={buildWhatsAppLink(
                       '5491100000000',
-                      `¡Hola Maris! 🌹 Acabo de notificar el pago para la remera '${checkoutRemera.title}' (Talle ${selectedSize}). Mi comprobante es: ${referenceCode}. ¡Quedo a la espera de tu confirmación!`
+                      `Hola Maris, acabo de realizar la compra de la remera '${checkoutRemera.title}' (Talle ${selectedSize}). Mi comprobante de pago es: ${referenceCode}.`
                     )}
                     target="_blank"
                     rel="noreferrer"
-                    className="w-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-sm flex items-center justify-center gap-2 shadow-md transition-all"
+                    className="w-full py-2.5 px-4 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-semibold flex items-center justify-center gap-2"
                   >
-                    <span>Avisarle a Maris por WhatsApp ahora</span>
+                    <span>Notificar a Maris por WhatsApp</span>
                   </a>
 
                   <button
@@ -572,25 +538,23 @@ export default function HomePage() {
                       setCheckoutRemera(null);
                       router.push('/mis-compras');
                     }}
-                    className="w-full py-2.5 px-4 rounded-xl border border-stone-300 text-stone-700 font-medium text-sm hover:bg-stone-50 transition-colors"
+                    className="w-full py-2 px-4 rounded-lg border border-zinc-200 text-zinc-700 text-xs font-medium hover:bg-zinc-50"
                   >
-                    Ver mis pedidos en "Mis Compras"
+                    Ver mis pedidos
                   </button>
                 </div>
               </div>
             ) : (
-              // FORMULARIO DE CHECKOUT
-              <form onSubmit={handleSubmitOrder} className="p-6 space-y-6">
-                {/* 1. Selección de Talle y Color */}
-                <div className="grid grid-cols-2 gap-4">
+              <form onSubmit={handleSubmitOrder} className="p-5 space-y-4">
+                <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 mb-2">
+                    <label className="block text-xs font-bold text-zinc-700 mb-1">
                       Talle:
                     </label>
                     <select
                       value={selectedSize}
                       onChange={(e) => setSelectedSize(e.target.value)}
-                      className="w-full py-2.5 px-3 rounded-xl border border-stone-300 bg-stone-50 text-sm font-semibold text-stone-900 focus:outline-none focus:ring-2 focus:ring-rose-900"
+                      className="w-full py-2 px-2.5 rounded-lg border border-zinc-300 text-xs text-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900"
                     >
                       {checkoutRemera.sizes.map((sz) => (
                         <option key={sz} value={sz}>
@@ -601,13 +565,13 @@ export default function HomePage() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 mb-2">
+                    <label className="block text-xs font-bold text-zinc-700 mb-1">
                       Color:
                     </label>
                     <select
                       value={selectedColor}
                       onChange={(e) => setSelectedColor(e.target.value)}
-                      className="w-full py-2.5 px-3 rounded-xl border border-stone-300 bg-stone-50 text-sm font-semibold text-stone-900 focus:outline-none focus:ring-2 focus:ring-rose-900"
+                      className="w-full py-2 px-2.5 rounded-lg border border-zinc-300 text-xs text-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900"
                     >
                       {checkoutRemera.colors.map((col) => (
                         <option key={col} value={col}>
@@ -618,146 +582,126 @@ export default function HomePage() {
                   </div>
                 </div>
 
-                {/* 2. Modalidad de Entrega */}
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 mb-2">
+                  <label className="block text-xs font-bold text-zinc-700 mb-1">
                     Modalidad de entrega:
                   </label>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-2 gap-2">
                     <button
                       type="button"
                       onClick={() => setDeliveryType('envio')}
-                      className={`p-3 rounded-xl border text-left flex items-center gap-2 text-xs font-semibold transition-all ${
+                      className={`p-2 rounded-lg border text-left flex items-center gap-1.5 text-xs font-medium ${
                         deliveryType === 'envio'
-                          ? 'border-rose-900 bg-rose-50/50 text-rose-950'
-                          : 'border-stone-200 text-stone-600 hover:bg-stone-50'
+                          ? 'border-zinc-900 bg-zinc-100 text-zinc-900 font-bold'
+                          : 'border-zinc-200 text-zinc-600'
                       }`}
                     >
-                      <Truck className="w-4 h-4 text-rose-800" />
-                      <span>Envío a Domicilio</span>
+                      <Truck className="w-3.5 h-3.5" />
+                      <span>Envío</span>
                     </button>
 
                     <button
                       type="button"
                       onClick={() => setDeliveryType('retiro')}
-                      className={`p-3 rounded-xl border text-left flex items-center gap-2 text-xs font-semibold transition-all ${
+                      className={`p-2 rounded-lg border text-left flex items-center gap-1.5 text-xs font-medium ${
                         deliveryType === 'retiro'
-                          ? 'border-rose-900 bg-rose-50/50 text-rose-950'
-                          : 'border-stone-200 text-stone-600 hover:bg-stone-50'
+                          ? 'border-zinc-900 bg-zinc-100 text-zinc-900 font-bold'
+                          : 'border-zinc-200 text-zinc-600'
                       }`}
                     >
-                      <MapPin className="w-4 h-4 text-rose-800" />
-                      <span>Punto de Retiro</span>
+                      <MapPin className="w-3.5 h-3.5" />
+                      <span>Retiro</span>
                     </button>
                   </div>
 
                   {deliveryType === 'envio' && (
-                    <div className="mt-3">
-                      <label className="block text-[11px] font-medium text-stone-600 mb-1">
-                        Dirección completa de entrega:
-                      </label>
+                    <div className="mt-2">
                       <input
                         type="text"
                         required={deliveryType === 'envio'}
-                        placeholder="Calle, número, piso, depto, localidad y código postal"
+                        placeholder="Dirección completa de entrega"
                         value={shippingAddress}
                         onChange={(e) => setShippingAddress(e.target.value)}
-                        className="w-full p-2.5 rounded-xl border border-stone-300 text-xs text-stone-900 focus:outline-none focus:ring-2 focus:ring-rose-900"
+                        className="w-full p-2 rounded-lg border border-zinc-300 text-xs text-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900"
                       />
                     </div>
                   )}
                 </div>
 
-                {/* 3. DATOS BANCARIOS DESTACADOS CON COPIAR EN 1 CLIC */}
-                <div className="p-4 rounded-2xl bg-amber-50/70 border border-amber-200 space-y-3">
-                  <div className="flex items-center gap-2 text-amber-900">
-                    <CreditCard className="w-4 h-4 text-amber-700" />
-                    <span className="text-xs font-bold uppercase tracking-wider">
-                      Datos para la Transferencia:
-                    </span>
+                {/* Datos bancarios */}
+                <div className="p-3.5 rounded-lg bg-zinc-50 border border-zinc-200 space-y-2 text-xs text-zinc-700">
+                  <div className="flex items-center gap-1.5 font-bold text-zinc-900">
+                    <CreditCard className="w-3.5 h-3.5" />
+                    <span>Datos Bancarios para Transferencia:</span>
+                  </div>
+                  <p><strong>Titular:</strong> {bankHolder}</p>
+                  <p><strong>Entidad:</strong> {bankName}</p>
+
+                  <div className="flex items-center justify-between bg-white p-2 rounded border border-zinc-200">
+                    <div>
+                      <span className="text-[10px] text-zinc-400 block">Alias:</span>
+                      <span className="font-mono font-bold text-zinc-900">{bankAlias}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleCopy(bankAlias, 'alias')}
+                      className="px-2 py-1 text-[11px] font-semibold rounded bg-zinc-100 hover:bg-zinc-200 text-zinc-800 flex items-center gap-1"
+                    >
+                      {copiedAlias ? '¡Copiado!' : 'Copiar'}
+                    </button>
                   </div>
 
-                  <div className="text-xs text-stone-700 space-y-1.5">
-                    <p><strong>Titular:</strong> {bankHolder}</p>
-                    <p><strong>Entidad:</strong> {bankName}</p>
-
-                    <div className="flex items-center justify-between bg-white p-2 rounded-lg border border-amber-200/80">
-                      <div>
-                        <span className="text-[10px] uppercase text-stone-600 block">Alias CBU:</span>
-                        <span className="font-mono font-bold text-stone-900">{bankAlias}</span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => handleCopy(bankAlias, 'alias')}
-                        className="px-2.5 py-1 text-xs font-semibold rounded bg-amber-100 hover:bg-amber-200 text-amber-900 flex items-center gap-1 transition-colors"
-                      >
-                        {copiedAlias ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-                        {copiedAlias ? '¡Copiado!' : 'Copiar'}
-                      </button>
+                  <div className="flex items-center justify-between bg-white p-2 rounded border border-zinc-200">
+                    <div>
+                      <span className="text-[10px] text-zinc-400 block">CBU:</span>
+                      <span className="font-mono text-zinc-900">{bankCbu}</span>
                     </div>
-
-                    <div className="flex items-center justify-between bg-white p-2 rounded-lg border border-amber-200/80">
-                      <div>
-                        <span className="text-[10px] uppercase text-stone-600 block">CBU:</span>
-                        <span className="font-mono text-xs text-stone-900">{bankCbu}</span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => handleCopy(bankCbu, 'cbu')}
-                        className="px-2.5 py-1 text-xs font-semibold rounded bg-amber-100 hover:bg-amber-200 text-amber-900 flex items-center gap-1 transition-colors"
-                      >
-                        {copiedCbu ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-                        {copiedCbu ? '¡Copiado!' : 'Copiar'}
-                      </button>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleCopy(bankCbu, 'cbu')}
+                      className="px-2 py-1 text-[11px] font-semibold rounded bg-zinc-100 hover:bg-zinc-200 text-zinc-800 flex items-center gap-1"
+                    >
+                      {copiedCbu ? '¡Copiado!' : 'Copiar'}
+                    </button>
                   </div>
                 </div>
 
-                {/* 4. Número de comprobante */}
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 mb-1">
-                    N° de Comprobante u Operación de Pago <span className="text-rose-600">*</span>:
+                  <label className="block text-xs font-bold text-zinc-700 mb-1">
+                    N° de Comprobante / Código de Operación <span className="text-red-500">*</span>:
                   </label>
                   <input
                     type="text"
                     required
-                    placeholder="Ej: 19482746 o Código de transferencia bancaria"
+                    placeholder="Ej: 19482746"
                     value={referenceCode}
                     onChange={(e) => setReferenceCode(e.target.value)}
-                    className="w-full p-2.5 rounded-xl border border-stone-300 text-xs font-mono text-stone-900 focus:outline-none focus:ring-2 focus:ring-rose-900"
+                    className="w-full p-2 rounded-lg border border-zinc-300 text-xs font-mono text-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900"
                   />
-                  <p className="text-[11px] text-stone-600 mt-1">
-                    Ingresá el número que figura en tu comprobante para que Maris pueda conciliar la transferencia rápidamente.
-                  </p>
                 </div>
 
-                {/* 5. Notas opcionales */}
                 <div>
-                  <label className="block text-[11px] font-medium text-stone-600 mb-1">
-                    Aclaraciones o notas (opcional):
+                  <label className="block text-[11px] text-zinc-500 mb-1">
+                    Aclaraciones (opcional):
                   </label>
                   <textarea
                     rows={2}
-                    placeholder="Ej: Timbre A, entregar por la tarde, etc."
+                    placeholder="Timbre, depto o preferencia horaria..."
                     value={orderNotes}
                     onChange={(e) => setOrderNotes(e.target.value)}
-                    className="w-full p-2.5 rounded-xl border border-stone-300 text-xs text-stone-900 focus:outline-none focus:ring-2 focus:ring-rose-900"
+                    className="w-full p-2 rounded-lg border border-zinc-300 text-xs text-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900"
                   />
                 </div>
 
-                {/* Botón de Confirmación */}
                 <button
                   type="submit"
                   disabled={submittingOrder}
-                  className="w-full py-3.5 px-4 rounded-xl bg-rose-900 hover:bg-rose-800 disabled:bg-stone-400 text-white font-semibold text-sm shadow-lg hover:shadow-xl transition-all uppercase tracking-wider flex items-center justify-center gap-2"
+                  className="w-full py-2.5 px-4 rounded-lg bg-zinc-900 hover:bg-zinc-800 disabled:bg-zinc-400 text-white font-semibold text-xs transition-colors flex items-center justify-center gap-2"
                 >
                   {submittingOrder ? (
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   ) : (
-                    <>
-                      <CheckCircle2 className="w-4 h-4" />
-                      <span>Confirmar Pedido y Enviar Comprobante</span>
-                    </>
+                    <span>Confirmar Pedido y Enviar Comprobante</span>
                   )}
                 </button>
               </form>

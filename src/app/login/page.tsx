@@ -107,31 +107,26 @@ function LoginForm() {
   };
 
   return (
-    <div className="max-w-md w-full bg-white rounded-3xl shadow-xl border border-stone-200 overflow-hidden">
-      {/* Cabecera */}
-      <div className="bg-gradient-to-br from-stone-900 to-rose-950 p-8 text-center text-white relative">
-        <span className="w-12 h-12 rounded-full bg-rose-900/50 border border-rose-500/30 flex items-center justify-center text-2xl mx-auto mb-3 shadow-inner">
-          🌹
-        </span>
-        <h2 className="font-serif text-2xl sm:text-3xl font-bold tracking-tight">
+    <div className="max-w-md w-full bg-white rounded-xl shadow-xs border border-zinc-200 overflow-hidden">
+      <div className="bg-zinc-900 p-6 text-center text-white">
+        <h2 className="text-xl font-bold tracking-tight">
           Mujeres del Tango
         </h2>
-        <p className="text-xs text-rose-300 mt-1 uppercase tracking-widest font-sans">
-          Acceso a la Tienda & Compras
+        <p className="text-xs text-zinc-400 mt-1">
+          Acceso a la Tienda
         </p>
       </div>
 
-      {/* Tabs */}
-      <div className="flex border-b border-stone-200 text-sm font-semibold">
+      <div className="flex border-b border-zinc-200 text-xs font-semibold">
         <button
           onClick={() => {
             setActiveTab('login');
             setErrorMessage(null);
           }}
-          className={`flex-1 py-3.5 text-center transition-colors ${
+          className={`flex-1 py-3 text-center transition-colors ${
             activeTab === 'login'
-              ? 'text-rose-900 border-b-2 border-rose-900 bg-rose-50/30'
-              : 'text-stone-500 hover:text-stone-800'
+              ? 'text-zinc-900 border-b-2 border-zinc-900 bg-zinc-50'
+              : 'text-zinc-500 hover:text-zinc-800'
           }`}
         >
           Iniciar Sesión
@@ -141,28 +136,28 @@ function LoginForm() {
             setActiveTab('register');
             setErrorMessage(null);
           }}
-          className={`flex-1 py-3.5 text-center transition-colors ${
+          className={`flex-1 py-3 text-center transition-colors ${
             activeTab === 'register'
-              ? 'text-rose-900 border-b-2 border-rose-900 bg-rose-50/30'
-              : 'text-stone-500 hover:text-stone-800'
+              ? 'text-zinc-900 border-b-2 border-zinc-900 bg-zinc-50'
+              : 'text-zinc-500 hover:text-zinc-800'
           }`}
         >
           Crear Cuenta
         </button>
       </div>
 
-      <div className="p-8">
+      <div className="p-6">
         {errorMessage && (
-          <div className="mb-6 p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-900 text-xs flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 shrink-0 text-rose-700" />
+          <div className="mb-4 p-3 rounded-lg bg-zinc-100 border border-zinc-200 text-zinc-800 text-xs flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0" />
             <span>{errorMessage}</span>
           </div>
         )}
 
         {activeTab === 'login' ? (
-          <form onSubmit={handleLogin} className="space-y-4">
+          <form onSubmit={handleLogin} className="space-y-3.5">
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 mb-1">
+              <label className="block text-xs font-semibold text-zinc-700 mb-1">
                 Correo Electrónico
               </label>
               <input
@@ -171,12 +166,12 @@ function LoginForm() {
                 placeholder="ejemplo@correo.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full p-3 rounded-xl border border-stone-300 text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-rose-900"
+                className="w-full p-2.5 rounded-lg border border-zinc-300 text-sm text-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 mb-1">
+              <label className="block text-xs font-semibold text-zinc-700 mb-1">
                 Contraseña
               </label>
               <input
@@ -185,7 +180,7 @@ function LoginForm() {
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full p-3 rounded-xl border border-stone-300 text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-rose-900"
+                className="w-full p-2.5 rounded-lg border border-zinc-300 text-sm text-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900"
               />
             </div>
 
@@ -193,28 +188,24 @@ function LoginForm() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3.5 px-4 rounded-xl bg-rose-900 hover:bg-rose-800 disabled:bg-stone-400 text-white font-semibold text-sm shadow-md transition-all uppercase tracking-wider flex items-center justify-center gap-2"
+                className="w-full py-2.5 px-4 rounded-lg bg-zinc-900 hover:bg-zinc-800 disabled:bg-zinc-400 text-white font-semibold text-xs transition-colors flex items-center justify-center gap-2"
               >
                 {loading ? (
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 ) : (
                   <>
-                    <LogIn className="w-4 h-4" />
+                    <LogIn className="w-3.5 h-3.5" />
                     <span>Ingresar</span>
                   </>
                 )}
               </button>
             </div>
-
-            <p className="text-center text-xs text-stone-600 pt-3">
-              ¿Maris te creó una cuenta por WhatsApp? Ingresá con el correo y contraseña provisoria recibidos.
-            </p>
           </form>
         ) : (
-          <form onSubmit={handleRegister} className="space-y-4">
+          <form onSubmit={handleRegister} className="space-y-3">
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 mb-1">
-                Nombre Completo <span className="text-rose-600">*</span>
+              <label className="block text-xs font-semibold text-zinc-700 mb-1">
+                Nombre Completo <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
@@ -222,13 +213,13 @@ function LoginForm() {
                 placeholder="Tu nombre y apellido"
                 value={regFullName}
                 onChange={(e) => setRegFullName(e.target.value)}
-                className="w-full p-2.5 rounded-xl border border-stone-300 text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-rose-900"
+                className="w-full p-2 rounded-lg border border-zinc-300 text-sm text-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 mb-1">
-                Correo Electrónico <span className="text-rose-600">*</span>
+              <label className="block text-xs font-semibold text-zinc-700 mb-1">
+                Correo Electrónico <span className="text-red-500">*</span>
               </label>
               <input
                 type="email"
@@ -236,12 +227,12 @@ function LoginForm() {
                 placeholder="tu@correo.com"
                 value={regEmail}
                 onChange={(e) => setRegEmail(e.target.value)}
-                className="w-full p-2.5 rounded-xl border border-stone-300 text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-rose-900"
+                className="w-full p-2 rounded-lg border border-zinc-300 text-sm text-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 mb-1">
+              <label className="block text-xs font-semibold text-zinc-700 mb-1">
                 WhatsApp / Teléfono
               </label>
               <input
@@ -249,26 +240,26 @@ function LoginForm() {
                 placeholder="Ej: 11 2345 6789"
                 value={regPhone}
                 onChange={(e) => setRegPhone(e.target.value)}
-                className="w-full p-2.5 rounded-xl border border-stone-300 text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-rose-900"
+                className="w-full p-2 rounded-lg border border-zinc-300 text-sm text-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 mb-1">
+              <label className="block text-xs font-semibold text-zinc-700 mb-1">
                 Dirección para Envíos
               </label>
               <input
                 type="text"
-                placeholder="Calle, número, depto, ciudad"
+                placeholder="Calle, número, ciudad"
                 value={regAddress}
                 onChange={(e) => setRegAddress(e.target.value)}
-                className="w-full p-2.5 rounded-xl border border-stone-300 text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-rose-900"
+                className="w-full p-2 rounded-lg border border-zinc-300 text-sm text-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 mb-1">
-                Contraseña (mínimo 6 caracteres) <span className="text-rose-600">*</span>
+              <label className="block text-xs font-semibold text-zinc-700 mb-1">
+                Contraseña (mínimo 6 caracteres) <span className="text-red-500">*</span>
               </label>
               <input
                 type="password"
@@ -277,7 +268,7 @@ function LoginForm() {
                 placeholder="••••••••"
                 value={regPassword}
                 onChange={(e) => setRegPassword(e.target.value)}
-                className="w-full p-2.5 rounded-xl border border-stone-300 text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-rose-900"
+                className="w-full p-2 rounded-lg border border-zinc-300 text-sm text-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900"
               />
             </div>
 
@@ -285,14 +276,14 @@ function LoginForm() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3.5 px-4 rounded-xl bg-rose-900 hover:bg-rose-800 disabled:bg-stone-400 text-white font-semibold text-sm shadow-md transition-all uppercase tracking-wider flex items-center justify-center gap-2"
+                className="w-full py-2.5 px-4 rounded-lg bg-zinc-900 hover:bg-zinc-800 disabled:bg-zinc-400 text-white font-semibold text-xs transition-colors flex items-center justify-center gap-2"
               >
                 {loading ? (
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 ) : (
                   <>
-                    <UserPlus className="w-4 h-4" />
-                    <span>Crear mi Cuenta</span>
+                    <UserPlus className="w-3.5 h-3.5" />
+                    <span>Crear Cuenta</span>
                   </>
                 )}
               </button>
@@ -306,8 +297,8 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <div className="min-h-screen bg-stone-100 flex items-center justify-center px-4 py-12">
-      <Suspense fallback={<div className="text-stone-600 text-sm">Cargando...</div>}>
+    <div className="min-h-screen bg-zinc-50 flex items-center justify-center px-4 py-10">
+      <Suspense fallback={<div className="text-zinc-500 text-xs">Cargando...</div>}>
         <LoginForm />
       </Suspense>
     </div>

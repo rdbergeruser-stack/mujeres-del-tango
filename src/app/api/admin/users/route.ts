@@ -97,7 +97,7 @@ export async function POST(req: NextRequest) {
 
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
     const loginUrl = `${siteUrl}/login`;
-    const message = `¡Hola ${full_name}! Te saluda Maris de Mujeres del Tango 🌹 Ya creamos tu cuenta en nuestra tienda. Podés ingresar con tu correo: ${email} y contraseña temporal: ${temp_password}. Al entrar por primera vez, el sistema te pedirá que elijas tu contraseña definitiva. Enlace: ${loginUrl}`;
+    const message = `¡Hola ${full_name}! Te saluda Maris de Mujeres del Tango. Ya creamos tu cuenta en nuestra tienda. Podés ingresar con tu correo: ${email} y contraseña temporal: ${temp_password}. Al entrar por primera vez, el sistema te pedirá que elijas tu contraseña definitiva. Enlace: ${loginUrl}`;
 
     const whatsAppLink = phone ? buildWhatsAppLink(phone, message) : null;
 
@@ -154,7 +154,7 @@ export async function PATCH(req: NextRequest) {
 
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
     const loginUrl = `${siteUrl}/login`;
-    const message = `¡Hola ${profile?.full_name}! Te saluda Maris de Mujeres del Tango 🌹 Se reestableció tu acceso temporal. Tu nueva contraseña temporal es: ${temp_password}. Ingresá en ${loginUrl} y elegí tu nueva contraseña.`;
+    const message = `¡Hola ${profile?.full_name}! Te saluda Maris de Mujeres del Tango. Se reestableció tu acceso temporal. Tu nueva contraseña temporal es: ${temp_password}. Ingresá en ${loginUrl} y elegí tu nueva contraseña.`;
     const whatsAppLink = profile?.phone ? buildWhatsAppLink(profile.phone, message) : null;
 
     return NextResponse.json({

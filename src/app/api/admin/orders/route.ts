@@ -121,9 +121,9 @@ export async function PATCH(req: NextRequest) {
 
     let message = '';
     if (newStatus === 'approved') {
-      message = `¡Hola ${clientName}! Te saluda Maris de Mujeres del Tango 🌹 Confirmamos la recepción de tu pago para la remera '${remeraTitle}' en Talle ${size}. Ya estamos preparando tu paquete para ${deliveryTypeStr}. ¡Muchísimas gracias por apoyar este proyecto!`;
+      message = `¡Hola ${clientName}! Te saluda Maris de Mujeres del Tango. Confirmamos la recepción de tu pago para la remera '${remeraTitle}' en Talle ${size}. Ya estamos preparando tu paquete para ${deliveryTypeStr}. ¡Muchas gracias por tu compra!`;
     } else if (newStatus === 'delivered') {
-      message = `¡Hola ${clientName}! Te saluda Maris de Mujeres del Tango 🌹 Tu remera '${remeraTitle}' (Talle ${size}) ya se encuentra en camino / lista para entrega. ¡Que la disfrutes con toda la pasión tanguera!`;
+      message = `¡Hola ${clientName}! Te saluda Maris de Mujeres del Tango. Tu remera '${remeraTitle}' (Talle ${size}) ya se encuentra en camino / lista para entrega. ¡Que la disfrutes!`;
     }
 
     const whatsAppLink = clientPhone ? buildWhatsAppLink(clientPhone, message) : null;

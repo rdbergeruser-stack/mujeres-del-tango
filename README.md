@@ -1,4 +1,4 @@
-# 🌹 Mujeres del Tango - Tienda Online Oficial
+# Mujeres del Tango - Tienda Online Oficial
 
 Tienda online oficial de **"Mujeres del Tango"**, proyecto dedicado a la venta de remeras temáticas de diseño independiente inspiradas en grandes voces, letristas y compositoras de nuestra cultura (Tita Merello, Eladia Blázquez, Nelly Omar, Ada Falcón, entre otras).
 

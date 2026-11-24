@@ -66,20 +66,20 @@ export default function Navbar() {
   const isAdmin = profile?.role === 'admin' || user?.email?.toLowerCase().includes('maris');
 
   return (
-    <nav className="sticky top-0 z-50 bg-stone-900/95 backdrop-blur-md text-stone-100 border-b border-rose-950/60 shadow-md">
+    <nav className="sticky top-0 z-50 bg-white text-zinc-900 border-b border-zinc-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-20">
+        <div className="flex items-center justify-between h-16">
           {/* Logo y Nombre */}
-          <a href="/" className="flex items-center gap-3 group">
-            <span className="w-10 h-10 rounded-full bg-gradient-to-br from-rose-800 to-rose-950 border border-rose-500/30 flex items-center justify-center text-xl shadow-inner group-hover:scale-105 transition-transform duration-200">
-              🌹
-            </span>
+          <a href="/" className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-zinc-900 text-white flex items-center justify-center font-bold text-sm">
+              MT
+            </div>
             <div className="flex flex-col">
-              <span className="font-serif text-xl sm:text-2xl font-bold tracking-wide text-rose-100 group-hover:text-rose-300 transition-colors">
+              <span className="text-base sm:text-lg font-bold tracking-tight text-zinc-900">
                 Mujeres del Tango
               </span>
-              <span className="text-[10px] tracking-widest uppercase text-rose-300/80 -mt-1 font-sans">
-                Remeras & Homenaje Porteño
+              <span className="text-[10px] tracking-wider uppercase text-zinc-500 font-medium -mt-0.5">
+                Tienda de Remeras
               </span>
             </div>
           </a>
@@ -89,7 +89,7 @@ export default function Navbar() {
             <a
               href="/"
               className={`transition-colors py-1 ${
-                pathname === '/' ? 'text-rose-400 font-semibold' : 'text-stone-300 hover:text-white'
+                pathname === '/' ? 'text-zinc-900 font-semibold' : 'text-zinc-500 hover:text-zinc-900'
               }`}
             >
               Catálogo
@@ -100,11 +100,11 @@ export default function Navbar() {
                 href="/mis-compras"
                 className={`flex items-center gap-1.5 transition-colors py-1 ${
                   pathname === '/mis-compras'
-                    ? 'text-rose-400 font-semibold'
-                    : 'text-stone-300 hover:text-white'
+                    ? 'text-zinc-900 font-semibold'
+                    : 'text-zinc-500 hover:text-zinc-900'
                 }`}
               >
-                <ShoppingBag className="w-4 h-4 text-rose-400" />
+                <ShoppingBag className="w-4 h-4 text-zinc-700" />
                 <span>Mis Compras</span>
               </a>
             )}
@@ -112,35 +112,35 @@ export default function Navbar() {
             {isAdmin && (
               <a
                 href="/admin"
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-rose-900/40 border border-rose-700/60 transition-all ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all ${
                   pathname.startsWith('/admin')
-                    ? 'bg-rose-900 text-white shadow-sm'
-                    : 'text-rose-300 hover:bg-rose-850 hover:text-white'
+                    ? 'bg-zinc-900 text-white border-zinc-900 shadow-sm'
+                    : 'bg-zinc-100 text-zinc-800 border-zinc-200 hover:bg-zinc-200'
                 }`}
               >
-                <ShieldCheck className="w-4 h-4 text-amber-400" />
-                <span>Panel de Maris</span>
+                <ShieldCheck className="w-3.5 h-3.5" />
+                <span>Panel Admin (Maris)</span>
               </a>
             )}
 
             {/* Estado de Usuario */}
-            <div className="flex items-center space-x-3 pl-4 border-l border-stone-800">
+            <div className="flex items-center space-x-3 pl-4 border-l border-zinc-200">
               {loading ? (
-                <div className="w-20 h-8 bg-stone-800 animate-pulse rounded-full" />
+                <div className="w-20 h-8 bg-zinc-100 animate-pulse rounded-lg" />
               ) : user ? (
                 <div className="flex items-center space-x-3">
                   <div className="text-right hidden lg:block">
-                    <p className="text-xs font-semibold text-stone-200">
-                      {profile?.full_name || 'Amiga/o del Tango'}
+                    <p className="text-xs font-semibold text-zinc-900">
+                      {profile?.full_name || 'Usuario'}
                     </p>
-                    <p className="text-[11px] text-stone-400 truncate max-w-[140px]">
+                    <p className="text-[11px] text-zinc-500 truncate max-w-[140px]">
                       {user.email}
                     </p>
                   </div>
                   <button
                     onClick={handleSignOut}
                     title="Cerrar sesión"
-                    className="p-2 rounded-full hover:bg-stone-800 text-stone-400 hover:text-rose-300 transition-colors"
+                    className="p-1.5 rounded-lg hover:bg-zinc-100 text-zinc-500 hover:text-zinc-900 transition-colors"
                   >
                     <LogOut className="w-4 h-4" />
                   </button>
@@ -149,7 +149,7 @@ export default function Navbar() {
                 <div className="flex items-center space-x-2">
                   <a
                     href="/login"
-                    className="px-4 py-2 text-xs uppercase tracking-wider font-semibold rounded-full bg-rose-900 hover:bg-rose-800 text-white shadow-sm hover:shadow transition-all"
+                    className="px-4 py-2 text-xs font-semibold rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white transition-all"
                   >
                     Ingresar
                   </a>
@@ -162,7 +162,7 @@ export default function Navbar() {
           <div className="flex md:hidden items-center space-x-2">
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-2 rounded-lg text-stone-400 hover:text-white hover:bg-stone-800 focus:outline-none"
+              className="p-2 rounded-lg text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 focus:outline-none"
             >
               {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
@@ -172,11 +172,11 @@ export default function Navbar() {
 
       {/* Menú desplegable Móvil */}
       {mobileMenuOpen && (
-        <div className="md:hidden bg-stone-900 border-b border-rose-950 px-4 pt-2 pb-6 space-y-3">
+        <div className="md:hidden bg-white border-b border-zinc-200 px-4 pt-2 pb-6 space-y-3">
           <a
             href="/"
             onClick={() => setMobileMenuOpen(false)}
-            className="block px-3 py-2 rounded-md text-base font-medium text-stone-200 hover:bg-stone-800"
+            className="block px-3 py-2 rounded-md text-base font-medium text-zinc-800 hover:bg-zinc-100"
           >
             Catálogo de Remeras
           </a>
@@ -185,9 +185,9 @@ export default function Navbar() {
             <a
               href="/mis-compras"
               onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium text-stone-200 hover:bg-stone-800"
+              className="flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium text-zinc-800 hover:bg-zinc-100"
             >
-              <ShoppingBag className="w-5 h-5 text-rose-400" />
+              <ShoppingBag className="w-5 h-5 text-zinc-700" />
               <span>Mis Compras</span>
             </a>
           )}
@@ -196,28 +196,28 @@ export default function Navbar() {
             <a
               href="/admin"
               onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium text-rose-300 bg-rose-950/60 border border-rose-900"
+              className="flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium text-zinc-900 bg-zinc-100 border border-zinc-200"
             >
-              <ShieldCheck className="w-5 h-5 text-amber-400" />
-              <span>Panel de Maris (Admin)</span>
+              <ShieldCheck className="w-5 h-5" />
+              <span>Panel Admin (Maris)</span>
             </a>
           )}
 
-          <div className="pt-4 border-t border-stone-800">
+          <div className="pt-4 border-t border-zinc-200">
             {user ? (
               <div className="space-y-3">
                 <div className="px-3">
-                  <p className="text-sm font-semibold text-stone-200">
-                    {profile?.full_name || 'Compradora'}
+                  <p className="text-sm font-semibold text-zinc-900">
+                    {profile?.full_name || 'Usuario'}
                   </p>
-                  <p className="text-xs text-stone-400">{user.email}</p>
+                  <p className="text-xs text-zinc-500">{user.email}</p>
                 </div>
                 <button
                   onClick={() => {
                     setMobileMenuOpen(false);
                     handleSignOut();
                   }}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-stone-800 text-rose-300 hover:bg-stone-700 text-sm font-medium"
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-zinc-100 text-zinc-800 hover:bg-zinc-200 text-sm font-medium"
                 >
                   <LogOut className="w-4 h-4" />
                   Cerrar Sesión
@@ -227,7 +227,7 @@ export default function Navbar() {
               <a
                 href="/login"
                 onClick={() => setMobileMenuOpen(false)}
-                className="block text-center w-full px-4 py-2.5 rounded-lg bg-rose-900 hover:bg-rose-800 text-white font-medium text-sm"
+                className="block text-center w-full px-4 py-2.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white font-medium text-sm"
               >
                 Iniciar Sesión / Registrarse
               </a>

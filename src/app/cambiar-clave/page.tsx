@@ -39,7 +39,6 @@ export default function CambiarClavePage() {
         throw new Error(data.error || 'Error al actualizar contraseña');
       }
 
-      // Redirigir a la tienda
       router.push('/');
       router.refresh();
     } catch (err: any) {
@@ -50,33 +49,32 @@ export default function CambiarClavePage() {
   };
 
   return (
-    <div className="min-h-screen bg-stone-100 flex items-center justify-center px-4 py-12">
-      <div className="max-w-md w-full bg-white rounded-3xl shadow-2xl border border-stone-200 overflow-hidden">
-        {/* Banner */}
-        <div className="bg-rose-950 p-8 text-center text-white relative">
-          <div className="w-14 h-14 rounded-full bg-rose-900 border border-rose-700/50 flex items-center justify-center mx-auto mb-3 shadow-inner">
-            <KeyRound className="w-7 h-7 text-amber-300" />
+    <div className="min-h-screen bg-zinc-50 flex items-center justify-center px-4 py-10">
+      <div className="max-w-md w-full bg-white rounded-xl shadow-xs border border-zinc-200 overflow-hidden">
+        <div className="bg-zinc-900 p-6 text-center text-white">
+          <div className="w-10 h-10 rounded-lg bg-zinc-800 flex items-center justify-center mx-auto mb-2">
+            <KeyRound className="w-5 h-5 text-white" />
           </div>
-          <h2 className="font-serif text-2xl font-bold tracking-tight">
+          <h2 className="text-lg font-bold">
             Elegí tu Contraseña Definitiva
           </h2>
-          <p className="text-xs text-rose-300 mt-2 leading-relaxed">
-            Por seguridad, como tu cuenta fue creada con una clave provisoria, debés configurar tu contraseña personal para continuar a la tienda.
+          <p className="text-xs text-zinc-400 mt-1">
+            Por seguridad, configurá tu clave personal para continuar.
           </p>
         </div>
 
-        <div className="p-8">
+        <div className="p-6">
           {errorMessage && (
-            <div className="mb-6 p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-900 text-xs flex items-center gap-2">
-              <ShieldAlert className="w-4 h-4 shrink-0 text-rose-700" />
+            <div className="mb-4 p-3 rounded-lg bg-zinc-100 border border-zinc-200 text-zinc-800 text-xs flex items-center gap-2">
+              <ShieldAlert className="w-4 h-4 shrink-0" />
               <span>{errorMessage}</span>
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 mb-1">
-                Nueva Contraseña Personal
+              <label className="block text-xs font-semibold text-zinc-700 mb-1">
+                Nueva Contraseña
               </label>
               <input
                 type="password"
@@ -85,22 +83,22 @@ export default function CambiarClavePage() {
                 placeholder="Mínimo 6 caracteres"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                className="w-full p-3 rounded-xl border border-stone-300 text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-rose-900"
+                className="w-full p-2.5 rounded-lg border border-zinc-300 text-sm text-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 mb-1">
-                Confirmar Nueva Contraseña
+              <label className="block text-xs font-semibold text-zinc-700 mb-1">
+                Confirmar Contraseña
               </label>
               <input
                 type="password"
                 required
                 minLength={6}
-                placeholder="Repetí la misma contraseña"
+                placeholder="Repetí la contraseña"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full p-3 rounded-xl border border-stone-300 text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-rose-900"
+                className="w-full p-2.5 rounded-lg border border-zinc-300 text-sm text-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900"
               />
             </div>
 
@@ -108,14 +106,14 @@ export default function CambiarClavePage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3.5 px-4 rounded-xl bg-rose-900 hover:bg-rose-800 disabled:bg-stone-400 text-white font-semibold text-sm shadow-md transition-all uppercase tracking-wider flex items-center justify-center gap-2"
+                className="w-full py-2.5 px-4 rounded-lg bg-zinc-900 hover:bg-zinc-800 disabled:bg-zinc-400 text-white font-semibold text-xs transition-colors flex items-center justify-center gap-2"
               >
                 {loading ? (
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 ) : (
                   <>
-                    <CheckCircle2 className="w-4 h-4" />
-                    <span>Guardar y Entrar a la Tienda</span>
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>Guardar y Continuar</span>
                   </>
                 )}
               </button>
