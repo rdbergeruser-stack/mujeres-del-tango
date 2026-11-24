@@ -6,11 +6,17 @@ export async function middleware(request: NextRequest) {
     request,
   });
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+  const supabaseUrl =
+    process.env.NEXT_PUBLIC_SUPABASE_URL ||
+    process.env.SUPABASE_URL ||
+    '';
 
-  // Si no están configuradas las variables de entorno aún, continuar sin bloquear desarrollo local
-  if (!supabaseUrl || !supabaseAnonKey) {
+  const supabaseAnonKey =
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+    process.env.SUPABASE_ANON_KEY ||
+    '';
+
+  if (!supabaseUrl || !supabaseAnonKey || supabaseUrl.includes('placeholder')) {
     return supabaseResponse;
   }
 
@@ -37,7 +43,6 @@ export async function middleware(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname;
 
-  // Si el usuario está autenticado, verificamos su perfil en tango_profiles
   if (user) {
     const { data: profile } = await supabase
       .from('tango_profiles')
@@ -48,7 +53,6 @@ export async function middleware(request: NextRequest) {
     const mustChangePassword = (profile as any)?.must_change_password ?? false;
     const role = (profile as any)?.role ?? 'user';
 
-    // Regla de Onboarding Obligatorio: si must_change_password = true, redirigir a /cambiar-clave
     if (
       mustChangePassword &&
       pathname !== '/cambiar-clave' &&
@@ -61,28 +65,24 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(redirectUrl);
     }
 
-    // Si ya no debe cambiar contraseña y entra a /cambiar-clave, mandarlo a la home
     if (!mustChangePassword && pathname === '/cambiar-clave') {
       const redirectUrl = request.nextUrl.clone();
       redirectUrl.pathname = role === 'admin' ? '/admin' : '/';
       return NextResponse.redirect(redirectUrl);
     }
 
-    // Si intenta entrar al login estando autenticado
     if (pathname === '/login') {
       const redirectUrl = request.nextUrl.clone();
       redirectUrl.pathname = role === 'admin' ? '/admin' : '/';
       return NextResponse.redirect(redirectUrl);
     }
 
-    // Protección de rutas Admin
     if (pathname.startsWith('/admin') && role !== 'admin') {
       const redirectUrl = request.nextUrl.clone();
       redirectUrl.pathname = '/';
       return NextResponse.redirect(redirectUrl);
     }
   } else {
-    // Usuario NO autenticado intentando acceder a rutas protegidas
     if (
       pathname.startsWith('/admin') ||
       pathname.startsWith('/mis-compras') ||
