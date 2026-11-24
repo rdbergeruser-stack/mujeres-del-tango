@@ -1115,7 +1115,7 @@ export default function AdminPage() {
                   <input
                     type="text"
                     required
-                    placeholder="Laura Martínez"
+                    placeholder="Nombre y apellido"
                     value={clientFullName}
                     onChange={(e) => setClientFullName(e.target.value)}
                     className="w-full p-2 rounded-lg border border-zinc-300 text-xs text-zinc-900"
@@ -1126,7 +1126,7 @@ export default function AdminPage() {
                   <label className="block text-xs font-semibold text-zinc-700 mb-1">Usuario (opcional, se autogenera):</label>
                   <input
                     type="text"
-                    placeholder="laura o laura.martinez"
+                    placeholder="Nombre de usuario"
                     value={clientUsername}
                     onChange={(e) => setClientUsername(e.target.value)}
                     className="w-full p-2 rounded-lg border border-zinc-300 text-xs text-zinc-900"
@@ -1138,7 +1138,7 @@ export default function AdminPage() {
                   <input
                     type="tel"
                     required
-                    placeholder="11 4050 6070"
+                    placeholder="Número de teléfono"
                     value={clientPhone}
                     onChange={(e) => setClientPhone(e.target.value)}
                     className="w-full p-2 rounded-lg border border-zinc-300 text-xs text-zinc-900"

@@ -186,7 +186,7 @@ function LoginForm() {
                 required
                 autoCapitalize="none"
                 autoCorrect="off"
-                placeholder="ej: maris o tu_usuario"
+                placeholder="Tu usuario"
                 value={loginUser}
                 onChange={(e) => setLoginUser(e.target.value)}
                 className="w-full p-2.5 rounded-xl border border-zinc-800 bg-zinc-950 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-[#199DD0]"
@@ -233,7 +233,7 @@ function LoginForm() {
               <input
                 type="text"
                 required
-                placeholder="Ej: Maris o Laura Martínez"
+                placeholder="Nombre y apellido"
                 value={regFullName}
                 onChange={(e) => setRegFullName(e.target.value)}
                 className="w-full p-2.5 rounded-xl border border-zinc-800 bg-zinc-950 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-[#FF00FF]"
@@ -249,7 +249,7 @@ function LoginForm() {
                 required
                 autoCapitalize="none"
                 autoCorrect="off"
-                placeholder="ej: maris o laura"
+                placeholder="Elegí tu nombre de usuario"
                 value={regUsername}
                 onChange={(e) => setRegUsername(e.target.value)}
                 className="w-full p-2.5 rounded-xl border border-zinc-800 bg-zinc-950 text-sm text-white font-mono placeholder-zinc-500 focus:outline-none focus:border-[#FF00FF]"

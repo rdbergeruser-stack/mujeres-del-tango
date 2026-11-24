@@ -117,7 +117,7 @@ export default function Navbar() {
                 }`}
               >
                 <ShieldCheck className="w-4 h-4 text-[#FF00FF]" />
-                <span>Panel Admin (Maris)</span>
+                <span>Panel Administrador</span>
               </a>
             )}
 
@@ -205,7 +205,7 @@ export default function Navbar() {
               className="flex items-center gap-2 py-2 text-sm font-bold text-[#FF00FF]"
             >
               <ShieldCheck className="w-4 h-4" />
-              <span>Panel Admin (Maris)</span>
+              <span>Panel Administrador</span>
             </a>
           )}
 
