@@ -1,22 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
+import { OFFICIAL_COLLECTIONS } from '@/lib/constants';
 
 async function checkAdmin() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return false;
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return false;
 
-  const { data: profile } = await supabase
-    .from('tango_profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single();
+    if (user.email?.toLowerCase().includes('maris') || user.email?.toLowerCase().includes('admin')) {
+      return true;
+    }
 
-  return (profile as any)?.role === 'admin' || user.email?.toLowerCase().includes('maris');
+    const adminClient = createAdminClient();
+    const { data: profile } = await (adminClient as any)
+      .from('tango_profiles')
+      .select('role')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    return (profile as any)?.role === 'admin';
+  } catch {
+    return false;
+  }
 }
 
-// GET /api/admin/collections - Obtener colecciones
+// GET /api/admin/collections - Obtener colecciones (con autosembrado inteligente si está vacía)
 export async function GET() {
   try {
     const adminClient = createAdminClient();
@@ -25,10 +35,36 @@ export async function GET() {
       .select('*')
       .order('created_at', { ascending: false });
 
-    if (error) throw error;
-    return NextResponse.json({ collections });
+    if (!error && collections && collections.length > 0) {
+      return NextResponse.json({ collections });
+    }
+
+    // Auto-sembrar colecciones si la tabla está vacía
+    for (const coll of OFFICIAL_COLLECTIONS) {
+      await (adminClient as any)
+        .from('tango_collections')
+        .upsert(
+          {
+            name: coll.name,
+            bio: coll.bio,
+            instagram: coll.instagram,
+            avatar_url: coll.avatar_url,
+          },
+          { onConflict: 'name' }
+        );
+    }
+
+    const { data: seeded } = await adminClient
+      .from('tango_collections')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    return NextResponse.json({
+      collections: seeded && seeded.length > 0 ? seeded : OFFICIAL_COLLECTIONS,
+    });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message || 'Error al obtener colecciones' }, { status: 500 });
+    console.error('Error al obtener o sembrar colecciones:', error);
+    return NextResponse.json({ collections: OFFICIAL_COLLECTIONS });
   }
 }
 

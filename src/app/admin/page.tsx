@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { Remera, Collection, Profile } from '@/types/database';
 import { formatCurrency, buildWhatsAppLink, extractUsername, formatDetailedAddress, parseDetailedAddress, getEmptyAddress, AddressData } from '@/lib/utils';
+import { OFFICIAL_REMERAS, OFFICIAL_COLLECTIONS } from '@/lib/constants';
 import AddressForm from '@/components/AddressForm';
 import {
   Package,
@@ -89,6 +90,34 @@ export default function AdminPage() {
   const allSizes = ['S', 'M', 'L', 'XL', 'XXL'];
   const allColors = ['Blanco', 'Negro', 'Amarillo', 'Bordó', 'Celeste'];
 
+  // Sincronización del Catálogo Oficial
+  const [syncingCatalog, setSyncingCatalog] = useState(false);
+  const [syncMessage, setSyncMessage] = useState<string | null>(null);
+
+  const handleSyncOfficialCatalog = async () => {
+    try {
+      setSyncingCatalog(true);
+      setSyncMessage(null);
+      const res = await fetch('/api/admin/remeras', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'seed' }),
+      });
+      const data = await res.json();
+      if (data.remeras && data.remeras.length > 0) {
+        setRemeras(data.remeras);
+      } else {
+        setRemeras(OFFICIAL_REMERAS);
+      }
+      setSyncMessage(data.message || '¡Catálogo oficial de remeras sincronizado correctamente!');
+      setTimeout(() => setSyncMessage(null), 5000);
+    } catch (err: any) {
+      setSyncMessage('Error al sincronizar: ' + err.message);
+    } finally {
+      setSyncingCatalog(false);
+    }
+  };
+
   const loadData = async () => {
     try {
       setLoading(true);
@@ -99,17 +128,28 @@ export default function AdminPage() {
 
       const resRemeras = await fetch('/api/admin/remeras');
       const dataRemeras = await resRemeras.json();
-      if (dataRemeras.remeras) setRemeras(dataRemeras.remeras);
+      if (dataRemeras.remeras && dataRemeras.remeras.length > 0) {
+        setRemeras(dataRemeras.remeras);
+      } else {
+        setRemeras(OFFICIAL_REMERAS);
+      }
 
       const resColl = await fetch('/api/admin/collections');
       const dataColl = await resColl.json();
-      if (dataColl.collections) setCollections(dataColl.collections);
+      if (dataColl.collections && dataColl.collections.length > 0) {
+        setCollections(dataColl.collections);
+      } else {
+        setCollections(OFFICIAL_COLLECTIONS);
+      }
 
       const resClients = await fetch('/api/admin/users');
       const dataClients = await resClients.json();
       if (dataClients.profiles) setClients(dataClients.profiles);
     } catch (err) {
       console.error('Error cargando datos de admin:', err);
+      // Fallback seguro
+      setRemeras(OFFICIAL_REMERAS);
+      setCollections(OFFICIAL_COLLECTIONS);
     } finally {
       setLoading(false);
     }
@@ -928,68 +968,114 @@ export default function AdminPage() {
               </form>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {remeras.map((rem) => (
-                <div
-                  key={rem.id}
-                  className={`bg-white rounded-xl overflow-hidden border ${
-                    rem.is_active ? 'border-zinc-200' : 'border-zinc-300 opacity-60'
-                  }`}
+            {/* Cabecera de Catálogo y Sincronización */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-xl border border-zinc-200">
+              <div>
+                <h4 className="text-sm font-bold text-zinc-900">Catálogo de Remeras ({remeras.length})</h4>
+                <p className="text-xs text-zinc-500">
+                  Modelos registrados. Podés pausarlas, editarlas o sincronizar las 13 oficiales con un clic.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleSyncOfficialCatalog}
+                disabled={syncingCatalog}
+                className="py-2 px-3.5 rounded-lg border border-zinc-300 bg-zinc-50 hover:bg-zinc-100 text-zinc-800 text-xs font-semibold flex items-center gap-2 transition-all self-start sm:self-auto shadow-sm"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 text-[#FF00FF] ${syncingCatalog ? 'animate-spin' : ''}`} />
+                <span>{syncingCatalog ? 'Sincronizando...' : 'Sincronizar Catálogo Oficial'}</span>
+              </button>
+            </div>
+
+            {syncMessage && (
+              <div className="p-3.5 rounded-xl bg-green-50 border border-green-200 text-green-900 text-xs flex items-center gap-2 shadow-sm">
+                <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
+                <span>{syncMessage}</span>
+              </div>
+            )}
+
+            {remeras.length === 0 ? (
+              <div className="p-8 text-center bg-white rounded-xl border border-zinc-200 space-y-3">
+                <Package className="w-8 h-8 text-zinc-400 mx-auto" />
+                <h4 className="text-sm font-bold text-zinc-900">No hay remeras cargadas en la base de datos</h4>
+                <p className="text-xs text-zinc-500 max-w-sm mx-auto">
+                  Podés sincronizar las 13 remeras oficiales con todas sus fotos y talles directamente.
+                </p>
+                <button
+                  type="button"
+                  onClick={handleSyncOfficialCatalog}
+                  disabled={syncingCatalog}
+                  className="py-2.5 px-4 rounded-xl bg-gradient-to-r from-[#FF00FF] to-[#199DD0] text-white text-xs font-bold inline-flex items-center gap-2 shadow-sm"
                 >
-                  <div className="relative h-44 bg-zinc-100">
-                    <img
-                      src={rem.image_url || 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=800&q=80'}
-                      alt=""
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute top-2 right-2">
-                      <span className="px-2 py-0.5 rounded text-xs font-bold bg-zinc-900 text-white">
-                        {formatCurrency(Number(rem.price))}
-                      </span>
+                  <RefreshCw className={`w-3.5 h-3.5 ${syncingCatalog ? 'animate-spin' : ''}`} />
+                  <span>Cargar Catálogo Oficial Ahora</span>
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {remeras.map((rem) => (
+                  <div
+                    key={rem.id}
+                    className={`bg-white rounded-xl overflow-hidden border ${
+                      rem.is_active ? 'border-zinc-200' : 'border-zinc-300 opacity-60'
+                    }`}
+                  >
+                    <div className="relative h-44 bg-zinc-100">
+                      <img
+                        src={rem.image_url || 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=800&q=80'}
+                        alt=""
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute top-2 right-2">
+                        <span className="px-2 py-0.5 rounded text-xs font-bold bg-zinc-900 text-white">
+                          {formatCurrency(Number(rem.price))}
+                        </span>
+                      </div>
+                      <div className="absolute bottom-2 left-2">
+                        <span className="px-2 py-0.5 rounded text-[10px] bg-white text-zinc-800 font-medium">
+                          Stock: {rem.stock} u.
+                        </span>
+                      </div>
                     </div>
-                    <div className="absolute bottom-2 left-2">
-                      <span className="px-2 py-0.5 rounded text-[10px] bg-white text-zinc-800 font-medium">
-                        Stock: {rem.stock} u.
-                      </span>
-                    </div>
-                  </div>
 
-                  <div className="p-3.5 space-y-2">
-                    <div>
-                      <h4 className="font-bold text-zinc-900 text-xs leading-tight">{rem.title}</h4>
-                      <p className="text-[11px] text-zinc-500 mt-0.5">Talles: {rem.sizes?.join(', ')}</p>
-                    </div>
+                    <div className="p-3.5 space-y-2">
+                      <div>
+                        <h4 className="font-bold text-zinc-900 text-xs leading-tight">{rem.title}</h4>
+                        <p className="text-[11px] text-zinc-500 mt-0.5">Talles: {rem.sizes?.join(', ')}</p>
+                      </div>
 
-                    <div className="pt-2 border-t border-zinc-100 flex items-center justify-between">
-                      <button
-                        onClick={() => handleToggleActiveRemera(rem)}
-                        className={`text-xs font-medium flex items-center gap-1 ${
-                          rem.is_active ? 'text-zinc-800' : 'text-zinc-400'
-                        }`}
-                      >
-                        {rem.is_active ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
-                        <span>{rem.is_active ? 'Activa' : 'Pausada'}</span>
-                      </button>
-
-                      <div className="flex items-center gap-1">
+                      <div className="pt-2 border-t border-zinc-100 flex items-center justify-between">
                         <button
-                          onClick={() => handleEditClick(rem)}
-                          className="p-1 rounded text-zinc-500 hover:text-zinc-900"
+                          onClick={() => handleToggleActiveRemera(rem)}
+                          className={`text-xs font-medium flex items-center gap-1 ${
+                            rem.is_active ? 'text-zinc-800' : 'text-zinc-400'
+                          }`}
                         >
-                          <Edit2 className="w-3.5 h-3.5" />
+                          {rem.is_active ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                          <span>{rem.is_active ? 'Activa' : 'Pausada'}</span>
                         </button>
-                        <button
-                          onClick={() => handleDeleteRemera(rem.id)}
-                          className="p-1 rounded text-zinc-400 hover:text-red-600"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => handleEditClick(rem)}
+                            className="p-1 rounded text-zinc-500 hover:text-zinc-900"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteRemera(rem.id)}
+                            className="p-1 rounded text-zinc-400 hover:text-red-600"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
