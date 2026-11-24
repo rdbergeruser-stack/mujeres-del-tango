@@ -20,7 +20,8 @@ import {
   MapPin,
   Sparkles,
   ChevronRight,
-  Heart
+  Heart,
+  AlertCircle
 } from 'lucide-react';
 
 export default function HomePage() {
@@ -39,16 +40,17 @@ export default function HomePage() {
   const [selectedSizeFilter, setSelectedSizeFilter] = useState<string>('Todos');
   const [searchQuery, setSearchQuery] = useState<string>('');
 
-  // Previsualización de color por tarjeta
+  // Previsualización de color y talle por tarjeta
   const [cardSelectedColor, setCardSelectedColor] = useState<Record<string, string>>({});
+  const [cardSelectedSize, setCardSelectedSize] = useState<Record<string, string>>({});
 
   // Modal Colección
   const [activeCollectionModal, setActiveCollectionModal] = useState<Collection | null>(null);
 
   // Modal de Compra
   const [checkoutRemera, setCheckoutRemera] = useState<Remera | null>(null);
-  const [selectedSize, setSelectedSize] = useState<string>('');
-  const [selectedColor, setSelectedColor] = useState<string>('');
+  const [selectedSize, setSelectedSize] = useState<string>('M');
+  const [selectedColor, setSelectedColor] = useState<string>('Blanco');
   const [quantity, setQuantity] = useState<number>(1);
   const [deliveryType, setDeliveryType] = useState<'envio' | 'retiro'>('envio');
   const [shippingAddress, setShippingAddress] = useState<string>('');
@@ -57,6 +59,7 @@ export default function HomePage() {
   const [orderNotes, setOrderNotes] = useState<string>('');
   const [submittingOrder, setSubmittingOrder] = useState<boolean>(false);
   const [orderSuccess, setOrderSuccess] = useState<any>(null);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
 
   // Feedback copiar datos bancarios
   const [copiedAlias, setCopiedAlias] = useState(false);
@@ -89,18 +92,20 @@ export default function HomePage() {
           }
         }
 
-        const { data: remerasData, error: remerasError } = await supabase
-          .from('tango_remeras')
-          .select('*')
-          .eq('is_active', true)
-          .order('created_at', { ascending: false });
-
-        if (remerasError || !remerasData || remerasData.length === 0) {
+        // 1. Obtener remeras (la API se encarga de autosembrar la BD si está vacía)
+        try {
+          const res = await fetch('/api/remeras');
+          const data = await res.json();
+          if (data?.remeras && data.remeras.length > 0) {
+            setRemeras(data.remeras);
+          } else {
+            setRemeras(OFFICIAL_REMERAS);
+          }
+        } catch {
           setRemeras(OFFICIAL_REMERAS);
-        } else {
-          setRemeras(remerasData);
         }
 
+        // 2. Obtener colecciones
         const { data: collectionsData, error: collError } = await supabase
           .from('tango_collections')
           .select('*')
@@ -150,19 +155,21 @@ export default function HomePage() {
     return item.image_url || '/images/hero-banner.jpg';
   };
 
-  const handleOpenCheckout = (remera: Remera, initialColor?: string) => {
+  const handleOpenCheckout = (remera: Remera, initialColor?: string, initialSize?: string) => {
     if (!currentUser) {
       router.push('/login?redirect=/');
       return;
     }
     const chosenColor = initialColor || cardSelectedColor[remera.id] || remera.colors[0] || 'Blanco';
+    const chosenSize = initialSize || cardSelectedSize[remera.id] || remera.sizes[0] || 'M';
     setCheckoutRemera(remera);
-    setSelectedSize(remera.sizes[0] || 'M');
+    setSelectedSize(chosenSize);
     setSelectedColor(chosenColor);
     setQuantity(1);
     setReferenceCode('');
     setOrderNotes('');
     setOrderSuccess(null);
+    setCheckoutError(null);
     if (userProfile?.address) {
       setShippingAddress(userProfile.address);
       setShippingAddressData(parseDetailedAddress(userProfile.address));
@@ -182,13 +189,15 @@ export default function HomePage() {
 
   const handleSubmitOrder = async (e: React.FormEvent) => {
     e.preventDefault();
+    setCheckoutError(null);
+
     if (!checkoutRemera || !selectedSize || !referenceCode.trim()) {
-      alert('Por favor completá el talle y el código de comprobante de pago.');
+      setCheckoutError('Por favor completá el talle y el código de comprobante de pago.');
       return;
     }
 
     if (deliveryType === 'envio' && (!shippingAddressData.street.trim() || !shippingAddressData.number.trim())) {
-      alert('Por favor completá al menos la calle y el número para el envío.');
+      setCheckoutError('Por favor completá al menos la calle y el número para el envío.');
       return;
     }
 
@@ -220,7 +229,7 @@ export default function HomePage() {
 
       setOrderSuccess(data);
     } catch (err: any) {
-      alert(err.message || 'Ocurrió un error al registrar el pedido.');
+      setCheckoutError(err.message || 'Ocurrió un error al registrar el pedido.');
     } finally {
       setSubmittingOrder(false);
     }
@@ -456,14 +465,34 @@ export default function HomePage() {
                     </div>
 
                     {/* TALLES */}
-                    <div className="flex items-center gap-1.5 pt-1 text-[11px] text-zinc-500">
-                      <span>Talles:</span>
-                      <div className="flex gap-1 font-mono text-zinc-300">
-                        {item.sizes.map((s) => (
-                          <span key={s} className="px-1.5 py-0.5 rounded bg-zinc-950 border border-zinc-800 text-[10px]">
-                            {s}
-                          </span>
-                        ))}
+                    <div className="space-y-1.5 pt-1">
+                      <div className="flex items-center justify-between text-[11px] text-zinc-400">
+                        <span>Elegí tu talle:</span>
+                        <span className="font-semibold text-[#199DD0]">Talle {cardSelectedSize[item.id] || item.sizes[0] || 'M'}</span>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {item.sizes.map((s) => {
+                          const isSelected = (cardSelectedSize[item.id] || item.sizes[0]) === s;
+                          return (
+                            <button
+                              key={s}
+                              type="button"
+                              onClick={() => {
+                                setCardSelectedSize({
+                                  ...cardSelectedSize,
+                                  [item.id]: s,
+                                });
+                              }}
+                              className={`px-2.5 py-1 rounded-md text-xs font-mono font-semibold border transition-all ${
+                                isSelected
+                                  ? 'border-[#199DD0] bg-[#199DD0]/25 text-white shadow-sm'
+                                  : 'border-zinc-800 bg-zinc-950 text-zinc-400 hover:text-white hover:border-zinc-700'
+                              }`}
+                            >
+                              {s}
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
 
@@ -478,7 +507,7 @@ export default function HomePage() {
 
                       {currentUser ? (
                         <button
-                          onClick={() => handleOpenCheckout(item, currentCardColor)}
+                          onClick={() => handleOpenCheckout(item, currentCardColor, cardSelectedSize[item.id] || item.sizes[0])}
                           className="py-2.5 px-4 rounded-xl bg-gradient-to-r from-[#FF00FF] to-[#199DD0] hover:opacity-90 text-white font-bold text-xs flex items-center gap-1.5 shadow-[0_0_15px_rgba(255,0,255,0.3)] transition-all"
                         >
                           <ShoppingBag className="w-3.5 h-3.5" />
@@ -626,40 +655,62 @@ export default function HomePage() {
               </div>
             ) : (
               <form onSubmit={handleSubmitOrder} className="p-5 space-y-4">
-                {/* Talle y Color */}
-                <div className="grid grid-cols-2 gap-3">
+                {/* Talle y Color Interactivo */}
+                <div className="space-y-3.5">
                   <div>
-                    <label className="block text-xs font-bold text-zinc-300 mb-1">
-                      Talle:
-                    </label>
-                    <select
-                      value={selectedSize}
-                      onChange={(e) => setSelectedSize(e.target.value)}
-                      className="w-full py-2 px-3 rounded-xl bg-zinc-950 border border-zinc-800 text-xs text-white focus:outline-none focus:border-[#199DD0]"
-                    >
-                      {checkoutRemera.sizes.map((sz) => (
-                        <option key={sz} value={sz}>
-                          Talle {sz}
-                        </option>
-                      ))}
-                    </select>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="block text-xs font-bold text-zinc-300">
+                        Elegí tu Talle:
+                      </label>
+                      <span className="text-xs font-bold text-[#199DD0]">Talle {selectedSize}</span>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {checkoutRemera.sizes.map((sz) => {
+                        const isSelected = selectedSize === sz;
+                        return (
+                          <button
+                            key={sz}
+                            type="button"
+                            onClick={() => setSelectedSize(sz)}
+                            className={`flex-1 min-w-[50px] py-2 px-3 rounded-xl border font-mono text-xs font-bold transition-all ${
+                              isSelected
+                                ? 'border-[#199DD0] bg-[#199DD0]/25 text-white shadow-[0_0_10px_rgba(25,157,208,0.3)] ring-1 ring-[#199DD0]'
+                                : 'border-zinc-800 bg-zinc-950 text-zinc-400 hover:text-white hover:border-zinc-700'
+                            }`}
+                          >
+                            {sz}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-zinc-300 mb-1">
-                      Color:
-                    </label>
-                    <select
-                      value={selectedColor}
-                      onChange={(e) => setSelectedColor(e.target.value)}
-                      className="w-full py-2 px-3 rounded-xl bg-zinc-950 border border-zinc-800 text-xs text-white focus:outline-none focus:border-[#199DD0]"
-                    >
-                      {checkoutRemera.colors.map((col) => (
-                        <option key={col} value={col}>
-                          {col}
-                        </option>
-                      ))}
-                    </select>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="block text-xs font-bold text-zinc-300">
+                        Elegí el Color:
+                      </label>
+                      <span className="text-xs font-bold text-[#FF00FF]">{selectedColor}</span>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {checkoutRemera.colors.map((col) => {
+                        const isSelected = selectedColor === col;
+                        return (
+                          <button
+                            key={col}
+                            type="button"
+                            onClick={() => setSelectedColor(col)}
+                            className={`flex-1 py-2 px-3 rounded-xl border text-xs font-semibold transition-all ${
+                              isSelected
+                                ? 'border-[#FF00FF] bg-[#FF00FF]/25 text-white shadow-[0_0_10px_rgba(255,0,255,0.3)] ring-1 ring-[#FF00FF]'
+                                : 'border-zinc-800 bg-zinc-950 text-zinc-400 hover:text-white hover:border-zinc-700'
+                            }`}
+                          >
+                            {col}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
 
@@ -776,6 +827,14 @@ export default function HomePage() {
                     className="w-full p-2 rounded-xl bg-zinc-950 border border-zinc-800 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-zinc-700"
                   />
                 </div>
+
+                {/* Error Banner */}
+                {checkoutError && (
+                  <div className="p-3.5 rounded-xl bg-red-950/60 border border-red-700/80 text-red-200 text-xs flex items-center gap-2.5 shadow-sm">
+                    <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
+                    <span className="leading-relaxed">{checkoutError}</span>
+                  </div>
+                )}
 
                 <button
                   type="submit"

@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { OFFICIAL_REMERAS } from '@/lib/constants';
+
+function isUUID(str: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(str);
+}
 
 // POST /api/notify-payment - Registrar pedido y aviso de transferencia en tablas tango_
 export async function POST(req: NextRequest) {
@@ -10,13 +15,13 @@ export async function POST(req: NextRequest) {
 
     if (authError || !user) {
       return NextResponse.json(
-        { error: 'Debes iniciar sesión para realizar una compra' },
+        { error: 'Debes iniciar sesión con tu usuario para confirmar la compra.' },
         { status: 401 }
       );
     }
 
     const body = await req.json();
-    const {
+    let {
       remera_id,
       selected_size,
       selected_color,
@@ -27,23 +32,77 @@ export async function POST(req: NextRequest) {
       notes,
     } = body;
 
-    if (!remera_id || !selected_size || !reference_code) {
+    if (!remera_id || !selected_size || !reference_code || !reference_code.trim()) {
       return NextResponse.json(
-        { error: 'Remera, talle y número de comprobante/referencia son obligatorios' },
+        { error: 'Por favor completá el talle, color y número de comprobante.' },
         { status: 400 }
       );
     }
 
-    // Consultar precio y detalles de la remera
     const adminClient = createAdminClient();
-    const { data: remera, error: remeraError } = await (adminClient as any)
-      .from('tango_remeras')
-      .select('*')
-      .eq('id', remera_id)
-      .single();
+    let remera: any = null;
 
-    if (remeraError || !remera) {
-      return NextResponse.json({ error: 'Remera no encontrada' }, { status: 404 });
+    // 1. Si viene con un UUID válido, buscarlo directamente en la base de datos
+    if (isUUID(remera_id)) {
+      const { data, error } = await (adminClient as any)
+        .from('tango_remeras')
+        .select('*')
+        .eq('id', remera_id)
+        .maybeSingle();
+
+      if (data && !error) {
+        remera = data;
+      }
+    }
+
+    // 2. Si no es UUID o no se encontró, resolver por título a través de OFFICIAL_REMERAS
+    if (!remera) {
+      const officialItem = OFFICIAL_REMERAS.find(
+        (r) => r.id === remera_id || r.title.toLowerCase() === String(remera_id).toLowerCase()
+      );
+
+      const targetTitle = officialItem ? officialItem.title : remera_id;
+
+      // Buscar por título en la tabla de la base de datos
+      const { data: byTitle } = await (adminClient as any)
+        .from('tango_remeras')
+        .select('*')
+        .ilike('title', targetTitle)
+        .maybeSingle();
+
+      if (byTitle) {
+        remera = byTitle;
+      } else if (officialItem) {
+        // Si no existe aún en la base de datos, insertarla automáticamente para generar un UUID real
+        const { data: created, error: insertErr } = await (adminClient as any)
+          .from('tango_remeras')
+          .insert({
+            title: officialItem.title,
+            description: officialItem.description,
+            price: officialItem.price,
+            category: officialItem.category,
+            collection_name: officialItem.collection_name,
+            sizes: officialItem.sizes,
+            colors: officialItem.colors,
+            stock: officialItem.stock,
+            image_url: officialItem.image_url,
+            gallery_urls: officialItem.gallery_urls,
+            is_active: true,
+          })
+          .select()
+          .single();
+
+        if (created && !insertErr) {
+          remera = created;
+        }
+      }
+    }
+
+    if (!remera) {
+      return NextResponse.json(
+        { error: 'No se pudo vincular la remera seleccionada. Por favor recargá la página e intentalo de nuevo.' },
+        { status: 404 }
+      );
     }
 
     const unit_price = Number(remera.price);
@@ -62,7 +121,7 @@ export async function POST(req: NextRequest) {
       .from('tango_orders')
       .insert({
         user_id: user.id,
-        remera_id,
+        remera_id: remera.id, // UUID real garantizado
         selected_size,
         selected_color: selected_color || null,
         quantity,
@@ -76,7 +135,13 @@ export async function POST(req: NextRequest) {
       .select()
       .single();
 
-    if (orderInsertError) throw orderInsertError;
+    if (orderInsertError) {
+      console.error('Error al insertar orden:', orderInsertError);
+      return NextResponse.json(
+        { error: 'Ocurrió un error al registrar el pedido en la base de datos.' },
+        { status: 500 }
+      );
+    }
 
     // 2. Crear la notificación de pago vinculada
     const { data: notification, error: notifError } = await (adminClient as any)
@@ -90,7 +155,9 @@ export async function POST(req: NextRequest) {
       .select()
       .single();
 
-    if (notifError) throw notifError;
+    if (notifError) {
+      console.error('Error al insertar notificación:', notifError);
+    }
 
     return NextResponse.json({
       success: true,
@@ -98,8 +165,9 @@ export async function POST(req: NextRequest) {
       notification,
     }, { status: 201 });
   } catch (error: any) {
+    console.error('Error en /api/notify-payment:', error);
     return NextResponse.json(
-      { error: error.message || 'Error al registrar el pedido y pago' },
+      { error: error.message || 'Error al procesar el comprobante de pago.' },
       { status: 500 }
     );
   }
