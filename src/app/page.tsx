@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Remera, Collection, Profile } from '@/types/database';
-import { formatCurrency, buildWhatsAppLink, formatDetailedAddress, parseDetailedAddress, getEmptyAddress, AddressData } from '@/lib/utils';
+import { formatCurrency, buildWhatsAppLink, formatDetailedAddress, parseDetailedAddress, getEmptyAddress, AddressData, deduplicateRemeras } from '@/lib/utils';
 import { OFFICIAL_REMERAS, OFFICIAL_COLLECTIONS } from '@/lib/constants';
 import AddressForm from '@/components/AddressForm';
 import {
@@ -92,17 +92,17 @@ export default function HomePage() {
           }
         }
 
-        // 1. Obtener remeras (la API se encarga de autosembrar la BD si está vacía)
+        // 1. Obtener remeras (la API se encarga de autosembrar y depurar duplicados)
         try {
           const res = await fetch('/api/remeras');
           const data = await res.json();
           if (data?.remeras && data.remeras.length > 0) {
-            setRemeras(data.remeras);
+            setRemeras(deduplicateRemeras(data.remeras));
           } else {
-            setRemeras(OFFICIAL_REMERAS);
+            setRemeras(deduplicateRemeras(OFFICIAL_REMERAS));
           }
         } catch {
-          setRemeras(OFFICIAL_REMERAS);
+          setRemeras(deduplicateRemeras(OFFICIAL_REMERAS));
         }
 
         // 2. Obtener colecciones

@@ -26,7 +26,49 @@ async function checkAdmin() {
   }
 }
 
-// GET /api/admin/remeras - Listar todas las remeras (con autosembrado inteligente si está vacía)
+async function cleanDuplicateRemeras(adminClient: any, list: any[]): Promise<any[]> {
+  if (!list || !Array.isArray(list)) return [];
+  const byTitle = new Map<string, any[]>();
+  for (const item of list) {
+    const key = item.title.trim().toLowerCase();
+    if (!byTitle.has(key)) byTitle.set(key, []);
+    byTitle.get(key)!.push(item);
+  }
+
+  const cleanList: any[] = [];
+  for (const [key, group] of byTitle.entries()) {
+    if (group.length === 1) {
+      cleanList.push(group[0]);
+    } else {
+      // Ordenar: conservar el que tenga menor stock (tuvo compras) o más antiguo
+      group.sort((a, b) => Number(a.stock) - Number(b.stock));
+      const toKeep = group[0];
+      cleanList.push(toKeep);
+
+      // Eliminar los duplicados restantes de la base de datos
+      for (let i = 1; i < group.length; i++) {
+        const dup = group[i];
+        try {
+          await adminClient
+            .from('tango_orders')
+            .update({ remera_id: toKeep.id })
+            .eq('remera_id', dup.id);
+
+          await adminClient
+            .from('tango_remeras')
+            .delete()
+            .eq('id', dup.id);
+        } catch (delErr) {
+          console.error('Error al depurar duplicado en BD:', dup.id, delErr);
+        }
+      }
+    }
+  }
+
+  return cleanList;
+}
+
+// GET /api/admin/remeras - Listar todas las remeras (con depuración automática de duplicados)
 export async function GET() {
   try {
     const adminClient = createAdminClient();
@@ -38,7 +80,8 @@ export async function GET() {
       .order('created_at', { ascending: false });
 
     if (!error && remeras && remeras.length > 0) {
-      return NextResponse.json({ remeras });
+      const cleanRemeras = await cleanDuplicateRemeras(adminClient, remeras);
+      return NextResponse.json({ remeras: cleanRemeras });
     }
 
     // 2. Si la tabla está vacía o hubo error de tabla inexistente, sembrar las oficiales
@@ -84,14 +127,16 @@ export async function GET() {
       }
     }
 
-    // Volver a consultar con los UUIDs reales recién generados
+    // Volver a consultar con los UUIDs reales recién generados y depurar duplicados
     const { data: seededRemeras } = await adminClient
       .from('tango_remeras')
       .select('*')
       .order('created_at', { ascending: false });
 
+    const cleanSeeded = await cleanDuplicateRemeras(adminClient, seededRemeras || []);
+
     return NextResponse.json({
-      remeras: seededRemeras && seededRemeras.length > 0 ? seededRemeras : OFFICIAL_REMERAS,
+      remeras: cleanSeeded && cleanSeeded.length > 0 ? cleanSeeded : OFFICIAL_REMERAS,
     });
   } catch (error: any) {
     console.error('Error al obtener o sembrar remeras:', error);
@@ -164,10 +209,12 @@ export async function POST(req: NextRequest) {
           .select('*')
           .order('created_at', { ascending: false });
 
+        const cleanRemeras = await cleanDuplicateRemeras(adminClient, allRemeras || []);
+
         return NextResponse.json({
           success: true,
-          message: `Sincronización completada. ${insertedCount} remeras nuevas insertadas.`,
-          remeras: allRemeras && allRemeras.length > 0 ? allRemeras : OFFICIAL_REMERAS,
+          message: `Sincronización completada. Catálogo limpio sin duplicados.`,
+          remeras: cleanRemeras && cleanRemeras.length > 0 ? cleanRemeras : OFFICIAL_REMERAS,
         });
       }
 

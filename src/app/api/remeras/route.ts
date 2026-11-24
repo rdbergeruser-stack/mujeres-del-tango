@@ -2,7 +2,49 @@ import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { OFFICIAL_REMERAS, OFFICIAL_COLLECTIONS } from '@/lib/constants';
 
-// GET /api/remeras - Obtiene todas las remeras oficiales y autosembra la BD si está vacía
+async function cleanDuplicateRemeras(adminClient: any, list: any[]): Promise<any[]> {
+  if (!list || !Array.isArray(list)) return [];
+  const byTitle = new Map<string, any[]>();
+  for (const item of list) {
+    const key = item.title.trim().toLowerCase();
+    if (!byTitle.has(key)) byTitle.set(key, []);
+    byTitle.get(key)!.push(item);
+  }
+
+  const cleanList: any[] = [];
+  for (const [key, group] of byTitle.entries()) {
+    if (group.length === 1) {
+      cleanList.push(group[0]);
+    } else {
+      // Ordenar: conservar el que tenga menor stock (tuvo compras) o más antiguo
+      group.sort((a, b) => Number(a.stock) - Number(b.stock));
+      const toKeep = group[0];
+      cleanList.push(toKeep);
+
+      // Eliminar los duplicados restantes de la base de datos
+      for (let i = 1; i < group.length; i++) {
+        const dup = group[i];
+        try {
+          await adminClient
+            .from('tango_orders')
+            .update({ remera_id: toKeep.id })
+            .eq('remera_id', dup.id);
+
+          await adminClient
+            .from('tango_remeras')
+            .delete()
+            .eq('id', dup.id);
+        } catch (delErr) {
+          console.error('Error al depurar duplicado en BD:', dup.id, delErr);
+        }
+      }
+    }
+  }
+
+  return cleanList;
+}
+
+// GET /api/remeras - Obtiene todas las remeras oficiales y depura duplicados
 export async function GET() {
   try {
     const adminClient = createAdminClient();
@@ -14,9 +56,10 @@ export async function GET() {
       .eq('is_active', true)
       .order('created_at', { ascending: false });
 
-    // Si ya existen remeras en la base de datos con UUIDs reales, retornarlas
+    // Si ya existen remeras en la base de datos con UUIDs reales, depurar duplicados y retornarlas
     if (!fetchError && dbRemeras && dbRemeras.length > 0) {
-      return NextResponse.json({ remeras: dbRemeras });
+      const cleanList = await cleanDuplicateRemeras(adminClient, dbRemeras);
+      return NextResponse.json({ remeras: cleanList });
     }
 
     // 2. Si no hay remeras o la tabla está vacía, sembrar automáticamente las colecciones y remeras
@@ -69,8 +112,10 @@ export async function GET() {
       .eq('is_active', true)
       .order('created_at', { ascending: false });
 
+    const cleanSeeded = await cleanDuplicateRemeras(adminClient, seededRemeras || []);
+
     return NextResponse.json({
-      remeras: seededRemeras && seededRemeras.length > 0 ? seededRemeras : OFFICIAL_REMERAS,
+      remeras: cleanSeeded && cleanSeeded.length > 0 ? cleanSeeded : OFFICIAL_REMERAS,
     });
   } catch (error: any) {
     console.error('Error en /api/remeras:', error);

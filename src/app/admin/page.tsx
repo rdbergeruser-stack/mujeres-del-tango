@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { Remera, Collection, Profile } from '@/types/database';
-import { formatCurrency, buildWhatsAppLink, extractUsername, formatDetailedAddress, parseDetailedAddress, getEmptyAddress, AddressData } from '@/lib/utils';
+import { formatCurrency, buildWhatsAppLink, extractUsername, formatDetailedAddress, parseDetailedAddress, getEmptyAddress, AddressData, deduplicateRemeras } from '@/lib/utils';
 import { OFFICIAL_REMERAS, OFFICIAL_COLLECTIONS } from '@/lib/constants';
 import AddressForm from '@/components/AddressForm';
 import {
@@ -105,9 +105,9 @@ export default function AdminPage() {
       });
       const data = await res.json();
       if (data.remeras && data.remeras.length > 0) {
-        setRemeras(data.remeras);
+        setRemeras(deduplicateRemeras(data.remeras));
       } else {
-        setRemeras(OFFICIAL_REMERAS);
+        setRemeras(deduplicateRemeras(OFFICIAL_REMERAS));
       }
       setSyncMessage(data.message || '¡Catálogo oficial de remeras sincronizado correctamente!');
       setTimeout(() => setSyncMessage(null), 5000);
@@ -129,9 +129,9 @@ export default function AdminPage() {
       const resRemeras = await fetch('/api/admin/remeras');
       const dataRemeras = await resRemeras.json();
       if (dataRemeras.remeras && dataRemeras.remeras.length > 0) {
-        setRemeras(dataRemeras.remeras);
+        setRemeras(deduplicateRemeras(dataRemeras.remeras));
       } else {
-        setRemeras(OFFICIAL_REMERAS);
+        setRemeras(deduplicateRemeras(OFFICIAL_REMERAS));
       }
 
       const resColl = await fetch('/api/admin/collections');

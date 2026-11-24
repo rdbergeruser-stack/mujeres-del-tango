@@ -198,3 +198,24 @@ export function parseDetailedAddress(addressStr?: string | null): AddressData {
     notes,
   };
 }
+
+/**
+ * Deduplica una lista de remeras basándose en el título normalizado.
+ * Si existen duplicados, conserva el que tenga menor stock (indicador de ventas registradas) o el primero.
+ */
+export function deduplicateRemeras<T extends { title: string; stock?: number }>(items: T[]): T[] {
+  if (!items || !Array.isArray(items)) return [];
+  const map = new Map<string, T>();
+  for (const item of items) {
+    const key = item.title.trim().toLowerCase();
+    if (!map.has(key)) {
+      map.set(key, item);
+    } else {
+      const existing = map.get(key)!;
+      if (typeof item.stock === 'number' && typeof existing.stock === 'number' && item.stock < existing.stock) {
+        map.set(key, item);
+      }
+    }
+  }
+  return Array.from(map.values());
+}
