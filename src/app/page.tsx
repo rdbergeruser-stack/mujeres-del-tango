@@ -7,6 +7,7 @@ import { Remera, Collection, Profile } from '@/types/database';
 import { formatCurrency, buildWhatsAppLink, formatDetailedAddress, parseDetailedAddress, getEmptyAddress, AddressData, deduplicateRemeras } from '@/lib/utils';
 import { OFFICIAL_REMERAS, OFFICIAL_COLLECTIONS } from '@/lib/constants';
 import AddressForm from '@/components/AddressForm';
+import RemeraGalleryModal from '@/components/RemeraGalleryModal';
 import {
   Search,
   SlidersHorizontal,
@@ -21,7 +22,8 @@ import {
   Sparkles,
   ChevronRight,
   Heart,
-  AlertCircle
+  AlertCircle,
+  ZoomIn
 } from 'lucide-react';
 
 export default function HomePage() {
@@ -46,6 +48,17 @@ export default function HomePage() {
 
   // Modal Colección
   const [activeCollectionModal, setActiveCollectionModal] = useState<Collection | null>(null);
+
+  // Modal de Galería y Zoom de Estampa
+  const [galleryModalRemera, setGalleryModalRemera] = useState<Remera | null>(null);
+  const [galleryInitialColor, setGalleryInitialColor] = useState<string>('Blanco');
+  const [galleryInitialSize, setGalleryInitialSize] = useState<string>('M');
+
+  const handleOpenGallery = (remera: Remera, color?: string, size?: string) => {
+    setGalleryModalRemera(remera);
+    setGalleryInitialColor(color || cardSelectedColor[remera.id] || remera.colors[0] || 'Blanco');
+    setGalleryInitialSize(size || cardSelectedSize[remera.id] || remera.sizes[0] || 'M');
+  };
 
   // Modal de Compra
   const [checkoutRemera, setCheckoutRemera] = useState<Remera | null>(null);
@@ -389,8 +402,11 @@ export default function HomePage() {
                   key={item.id}
                   className="group bg-zinc-900/90 rounded-2xl overflow-hidden border border-zinc-800/90 hover:border-[#199DD0] transition-all duration-300 hover:shadow-[0_8px_30px_rgba(25,157,208,0.2)] flex flex-col"
                 >
-                  {/* IMAGEN MOCKUP OFICIAL */}
-                  <div className="relative aspect-square w-full bg-zinc-950 overflow-hidden">
+                  {/* IMAGEN MOCKUP OFICIAL CON ACCESO A ZOOM */}
+                  <div
+                    onClick={() => handleOpenGallery(item, currentCardColor, cardSelectedSize[item.id] || item.sizes[0])}
+                    className="relative aspect-square w-full bg-zinc-950 overflow-hidden cursor-pointer group/img"
+                  >
                     <img
                       src={displayImage}
                       alt={item.title}
@@ -406,14 +422,24 @@ export default function HomePage() {
                       </span>
                     </div>
 
+                    {/* Botón flotante para ver estampa y zoom */}
+                    <div className="absolute top-3 right-3 opacity-90 sm:opacity-0 group-hover/img:opacity-100 transition-opacity">
+                      <span className="px-2.5 py-1 rounded-md text-[10px] font-bold bg-zinc-950/90 backdrop-blur-md text-white border border-zinc-700 hover:border-[#199DD0] flex items-center gap-1 shadow-md">
+                        <ZoomIn className="w-3 h-3 text-[#199DD0]" />
+                        <span>Ver Estampa</span>
+                      </span>
+                    </div>
+
                     {/* Colección / Figura */}
                     {item.collection_name && (
                       <button
-                        onClick={() => {
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
                           const coll = collections.find((c) => c.name === item.collection_name);
                           if (coll) setActiveCollectionModal(coll);
                         }}
-                        className="absolute bottom-3 left-3 px-2.5 py-1 rounded-md text-[10px] font-medium bg-zinc-950/80 backdrop-blur-md text-zinc-300 hover:text-white border border-zinc-800 hover:border-[#199DD0] transition-colors flex items-center gap-1"
+                        className="absolute bottom-3 left-3 px-2.5 py-1 rounded-md text-[10px] font-medium bg-zinc-950/80 backdrop-blur-md text-zinc-300 hover:text-white border border-zinc-800 hover:border-[#199DD0] transition-colors flex items-center gap-1 z-10"
                       >
                         <span>{item.collection_name}</span>
                         <Info className="w-3 h-3 text-[#199DD0]" />
@@ -423,8 +449,11 @@ export default function HomePage() {
 
                   {/* DETALLES */}
                   <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
-                    <div>
-                      <h3 className="font-bold text-white text-base leading-snug group-hover:text-[#199DD0] transition-colors">
+                    <div
+                      onClick={() => handleOpenGallery(item, currentCardColor, cardSelectedSize[item.id] || item.sizes[0])}
+                      className="cursor-pointer group/title"
+                    >
+                      <h3 className="font-bold text-white text-base leading-snug group-hover/title:text-[#199DD0] transition-colors">
                         {item.title}
                       </h3>
                       <p className="text-xs text-zinc-400 mt-1.5 line-clamp-2 leading-relaxed">
@@ -582,6 +611,23 @@ export default function HomePage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* MODAL GALERÍA Y ZOOM DE LA ESTAMPA */}
+      {galleryModalRemera && (
+        <RemeraGalleryModal
+          remera={galleryModalRemera}
+          initialColor={galleryInitialColor}
+          initialSize={galleryInitialSize}
+          collections={collections}
+          currentUser={currentUser}
+          onClose={() => setGalleryModalRemera(null)}
+          onOpenCheckout={(rem, color, size) => handleOpenCheckout(rem, color, size)}
+          onViewCollection={(coll) => {
+            setGalleryModalRemera(null);
+            setActiveCollectionModal(coll);
+          }}
+        />
       )}
 
       {/* MODAL CHECKOUT & TRANSFERENCIA */}
