@@ -458,3 +458,28 @@ ON CONFLICT (title) DO UPDATE SET
   colors = EXCLUDED.colors,
   image_url = EXCLUDED.image_url,
   gallery_urls = EXCLUDED.gallery_urls;
+
+-- 10. TABLA tango_slider_images (CARRUSEL PRINCIPAL 1.91:1 ADMINISTRABLE)
+CREATE TABLE IF NOT EXISTS public.tango_slider_images (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  title TEXT,
+  subtitle TEXT,
+  image_url TEXT NOT NULL,
+  linked_remera_title TEXT,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.tango_slider_images ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Tango_slider_images: lectura pública de activas" ON public.tango_slider_images;
+CREATE POLICY "Tango_slider_images: lectura pública de activas"
+  ON public.tango_slider_images FOR SELECT
+  TO public
+  USING (is_active = true OR public.tango_is_admin());
+
+DROP POLICY IF EXISTS "Tango_slider_images: admin gestiona todo" ON public.tango_slider_images;
+CREATE POLICY "Tango_slider_images: admin gestiona todo"
+  ON public.tango_slider_images FOR ALL
+  USING (public.tango_is_admin());

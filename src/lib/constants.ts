@@ -1,4 +1,4 @@
-import { Remera, Collection } from '@/types/database';
+import { Remera, Collection, SliderImage } from '@/types/database';
 
 export const OFFICIAL_COLLECTIONS: Collection[] = [
   {
@@ -192,6 +192,69 @@ export const OFFICIAL_REMERAS: Remera[] = [
     stock: 45,
     image_url: '/remeras/maria-nieves-blanca.jpg',
     gallery_urls: ['/remeras/maria-nieves-blanca.jpg', '/remeras/maria-nieves-negra.jpg'],
+    is_active: true,
+    created_at: new Date().toISOString(),
+  },
+];
+
+export const DEFAULT_SLIDER_IMAGES: SliderImage[] = [
+  {
+    id: 'slide-1',
+    title: 'Colección Mujeres del Tango',
+    subtitle: 'Remeras de diseño independiente con actitud porteña',
+    image_url: '/slider/slide-1.jpg',
+    linked_remera_title: null,
+    sort_order: 0,
+    is_active: true,
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: 'slide-2',
+    title: 'Nina Miranda — Alma de Conservatorio',
+    subtitle: 'Una de las grandes voces del Río de la Plata',
+    image_url: '/slider/slide-2.jpg',
+    linked_remera_title: 'Nina Miranda — Alma de Conservatorio',
+    sort_order: 1,
+    is_active: true,
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: 'slide-3',
+    title: 'Tita Merello — Cuadrantes Pop Art',
+    subtitle: 'Estampa de alta definición en 4 cuadrantes vibrantes',
+    image_url: '/slider/slide-3.jpg',
+    linked_remera_title: 'Tita Merello — Cuadrantes Pop Art',
+    sort_order: 2,
+    is_active: true,
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: 'slide-4',
+    title: 'Así quedan puestas',
+    subtitle: 'Algodón peinado premium y calce cómodo para todos los cuerpos',
+    image_url: '/slider/slide-4.jpg',
+    linked_remera_title: null,
+    sort_order: 3,
+    is_active: true,
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: 'slide-5',
+    title: 'Edición Pop Art — Tita Merello',
+    subtitle: 'Homenaje urbano a un ícono de nuestra cultura popular',
+    image_url: '/slider/slide-5.jpg',
+    linked_remera_title: 'Tita Merello — Cuadrantes Pop Art',
+    sort_order: 4,
+    is_active: true,
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: 'slide-6',
+    title: 'Tango en la calle',
+    subtitle: 'Llevá la historia de las pioneras a donde vayas',
+    image_url: '/slider/slide-6.jpg',
+    linked_remera_title: 'Tita Merello — Cuadrantes Pop Art',
+    sort_order: 5,
     is_active: true,
     created_at: new Date().toISOString(),
   },

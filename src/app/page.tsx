@@ -3,11 +3,12 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { Remera, Collection, Profile } from '@/types/database';
+import { Remera, Collection, Profile, SliderImage } from '@/types/database';
 import { formatCurrency, buildWhatsAppLink, formatDetailedAddress, parseDetailedAddress, getEmptyAddress, AddressData, deduplicateRemeras } from '@/lib/utils';
-import { OFFICIAL_REMERAS, OFFICIAL_COLLECTIONS } from '@/lib/constants';
+import { OFFICIAL_REMERAS, OFFICIAL_COLLECTIONS, DEFAULT_SLIDER_IMAGES } from '@/lib/constants';
 import AddressForm from '@/components/AddressForm';
 import RemeraGalleryModal from '@/components/RemeraGalleryModal';
+import HeroSlider from '@/components/HeroSlider';
 import {
   Search,
   SlidersHorizontal,
@@ -32,6 +33,7 @@ export default function HomePage() {
 
   const [remeras, setRemeras] = useState<Remera[]>(OFFICIAL_REMERAS);
   const [collections, setCollections] = useState<Collection[]>(OFFICIAL_COLLECTIONS);
+  const [sliderImages, setSliderImages] = useState<SliderImage[]>(DEFAULT_SLIDER_IMAGES);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [userProfile, setUserProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -89,10 +91,11 @@ export default function HomePage() {
         setLoading(true);
 
         // Carga concurrente y en paralelo para máxima velocidad inicial
-        const [userRes, remerasRes, collectionsRes] = await Promise.all([
+        const [userRes, remerasRes, collectionsRes, sliderRes] = await Promise.all([
           supabase.auth.getUser().catch(() => ({ data: { user: null } })),
           fetch('/api/remeras').then((r) => r.json()).catch(() => ({ remeras: OFFICIAL_REMERAS })),
           supabase.from('tango_collections').select('*').order('name', { ascending: true }),
+          fetch('/api/slider').then((r) => r.json()).catch(() => ({ slides: DEFAULT_SLIDER_IMAGES })),
         ]);
 
         const user = userRes?.data?.user;
@@ -124,6 +127,12 @@ export default function HomePage() {
           setCollections(collectionsRes.data);
         } else {
           setCollections(OFFICIAL_COLLECTIONS);
+        }
+
+        if (sliderRes?.slides && sliderRes.slides.length > 0) {
+          setSliderImages(sliderRes.slides);
+        } else {
+          setSliderImages(DEFAULT_SLIDER_IMAGES);
         }
       } catch (err) {
         console.error('Error general cargando catálogo:', err);
@@ -248,26 +257,26 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 pb-20 selection:bg-[#FF00FF] selection:text-white">
-      {/* HERO SECTION DE LA MARCA */}
-      <section className="relative overflow-hidden border-b border-zinc-800 bg-gradient-to-b from-zinc-900 to-zinc-950 py-16 sm:py-24 text-center">
+      {/* HERO SECTION DE LA MARCA (COMPACTO PARA LUCIR EL CARRUSEL) */}
+      <section className="relative overflow-hidden border-b border-zinc-800 bg-gradient-to-b from-zinc-900 to-zinc-950 py-10 sm:py-14 text-center">
         {/* Glow de fondo con colores oficiales */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-gradient-to-r from-[#FF00FF]/15 via-[#9900CC]/10 to-[#199DD0]/15 blur-3xl pointer-events-none rounded-full" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[260px] bg-gradient-to-r from-[#FF00FF]/15 via-[#9900CC]/10 to-[#199DD0]/15 blur-3xl pointer-events-none rounded-full" />
 
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-zinc-900/90 border border-zinc-700/60 text-xs font-semibold text-zinc-300 mb-6 shadow-sm">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-zinc-900/90 border border-zinc-700/60 text-xs font-semibold text-zinc-300 mb-4 shadow-sm">
             <span className="w-2 h-2 rounded-full bg-[#FF00FF] animate-pulse" />
             <span>Tienda Oficial • Remeras de Colección</span>
           </div>
 
-          <div className="flex justify-center mb-4">
+          <div className="flex justify-center mb-3">
             <img
               src="/images/logo-horizontal.png"
               alt="Mujeres del Tango"
-              className="h-20 sm:h-28 w-auto object-contain drop-shadow-[0_4px_24px_rgba(255,0,255,0.35)]"
+              className="h-16 sm:h-24 w-auto object-contain drop-shadow-[0_4px_24px_rgba(255,0,255,0.35)]"
             />
           </div>
 
-          <p className="max-w-2xl mx-auto text-sm sm:text-base text-zinc-400 leading-relaxed mb-8">
+          <p className="max-w-2xl mx-auto text-xs sm:text-sm text-zinc-400 leading-relaxed mb-5">
             Remeras de autor inspiradas en las voces, letristas, bandoneonistas y bailarinas que hicieron historia en la música ciudadana.
           </p>
 
@@ -287,8 +296,21 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* CARRUSEL DE FOTOS REALES (1.91:1) */}
+      <HeroSlider
+        slides={sliderImages}
+        onSelectLinkedRemera={(remeraTitle) => {
+          const match = remeras.find(
+            (r) => r.title.toLowerCase() === remeraTitle.toLowerCase()
+          );
+          if (match) {
+            handleOpenGallery(match);
+          }
+        }}
+      />
+
       {/* FILTROS Y BUSCADOR */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6 relative z-10">
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 relative z-10">
         <div className="bg-zinc-900/90 backdrop-blur-md rounded-2xl border border-zinc-800 p-4 sm:p-5 shadow-xl space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
             {/* Buscador */}

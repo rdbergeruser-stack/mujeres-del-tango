@@ -77,6 +77,17 @@ export interface PaymentNotification {
   profile?: Profile;
 }
 
+export interface SliderImage {
+  id: string;
+  title: string | null;
+  subtitle: string | null;
+  image_url: string;
+  linked_remera_title: string | null;
+  sort_order: number;
+  is_active: boolean;
+  created_at: string;
+}
+
 export interface Database {
   public: {
     Tables: {

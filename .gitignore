@@ -38,4 +38,5 @@ next-env.d.ts
 # temp extracted assets
 Recursos/extracted_*
 Recursos/*.crdownload
+Recursos/Slider/
 

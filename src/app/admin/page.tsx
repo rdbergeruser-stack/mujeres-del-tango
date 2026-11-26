@@ -2,10 +2,11 @@
 
 import React, { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { Remera, Collection, Profile } from '@/types/database';
+import { Remera, Collection, Profile, SliderImage } from '@/types/database';
 import { formatCurrency, buildWhatsAppLink, extractUsername, formatDetailedAddress, parseDetailedAddress, getEmptyAddress, AddressData, deduplicateRemeras } from '@/lib/utils';
-import { OFFICIAL_REMERAS, OFFICIAL_COLLECTIONS } from '@/lib/constants';
+import { OFFICIAL_REMERAS, OFFICIAL_COLLECTIONS, DEFAULT_SLIDER_IMAGES } from '@/lib/constants';
 import AddressForm from '@/components/AddressForm';
+import ImageCropper191 from '@/components/ImageCropper191';
 import {
   Package,
   ShoppingBag,
@@ -26,13 +27,18 @@ import {
   EyeOff,
   RefreshCw,
   Search,
-  X
+  X,
+  Images,
+  Crop,
+  ArrowLeft,
+  ArrowRight,
+  Upload
 } from 'lucide-react';
 
 export default function AdminPage() {
   const supabase = createClient();
 
-  const [activeTab, setActiveTab] = useState<'ventas' | 'remeras' | 'clientes' | 'colecciones'>('ventas');
+  const [activeTab, setActiveTab] = useState<'ventas' | 'remeras' | 'carrusel' | 'clientes' | 'colecciones'>('ventas');
   const [loading, setLoading] = useState(true);
 
   // Datos principales
@@ -40,6 +46,18 @@ export default function AdminPage() {
   const [remeras, setRemeras] = useState<Remera[]>([]);
   const [collections, setCollections] = useState<Collection[]>([]);
   const [clients, setClients] = useState<Profile[]>([]);
+  const [slides, setSlides] = useState<SliderImage[]>([]);
+
+  // Gestión del Carrusel (1.91:1 con recorte interactivo)
+  const [editingSlide, setEditingSlide] = useState<SliderImage | null>(null);
+  const [slideTitle, setSlideTitle] = useState('');
+  const [slideSubtitle, setSlideSubtitle] = useState('');
+  const [slideLinkedRemera, setSlideLinkedRemera] = useState('');
+  const [slideCropSource, setSlideCropSource] = useState<string | null>(null);
+  const [slideCroppedFile, setSlideCroppedFile] = useState<File | null>(null);
+  const [slidePreviewUrl, setSlidePreviewUrl] = useState<string>('');
+  const [savingSlide, setSavingSlide] = useState(false);
+  const [slideFeedback, setSlideFeedback] = useState<string | null>(null);
 
   // Filtros de Ventas
   const [orderStatusFilter, setOrderStatusFilter] = useState<string>('todos');
@@ -123,11 +141,12 @@ export default function AdminPage() {
       setLoading(true);
 
       // Carga concurrente y en paralelo para máxima velocidad
-      const [resOrders, resRemeras, resColl, resClients] = await Promise.all([
+      const [resOrders, resRemeras, resColl, resClients, resSlides] = await Promise.all([
         fetch('/api/admin/orders').then((r) => r.json()).catch(() => ({})),
         fetch('/api/admin/remeras').then((r) => r.json()).catch(() => ({})),
         fetch('/api/admin/collections').then((r) => r.json()).catch(() => ({})),
         fetch('/api/admin/users').then((r) => r.json()).catch(() => ({})),
+        fetch('/api/admin/slider').then((r) => r.json()).catch(() => ({})),
       ]);
 
       if (resOrders?.orders) setOrders(resOrders.orders);
@@ -145,12 +164,145 @@ export default function AdminPage() {
       }
 
       if (resClients?.profiles) setClients(resClients.profiles);
+
+      if (resSlides?.slides && resSlides.slides.length > 0) {
+        setSlides(resSlides.slides);
+      } else {
+        setSlides(DEFAULT_SLIDER_IMAGES);
+      }
     } catch (err) {
       console.error('Error cargando datos de admin:', err);
       setRemeras(deduplicateRemeras(OFFICIAL_REMERAS));
       setCollections(OFFICIAL_COLLECTIONS);
+      setSlides(DEFAULT_SLIDER_IMAGES);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // --- HANDLERS CARRUSEL 1.91:1 ---
+  const resetSlideForm = () => {
+    setEditingSlide(null);
+    setSlideTitle('');
+    setSlideSubtitle('');
+    setSlideLinkedRemera('');
+    setSlideCropSource(null);
+    setSlideCroppedFile(null);
+    setSlidePreviewUrl('');
+  };
+
+  const handleSlideFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        setSlideCropSource(reader.result);
+      }
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  const handleSaveSlide = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingSlide && !slideCroppedFile && !slidePreviewUrl) {
+      alert('Seleccioná una foto y aplicá el recorte 1.91:1 antes de guardar.');
+      return;
+    }
+
+    try {
+      setSavingSlide(true);
+      setSlideFeedback(null);
+
+      const formData = new FormData();
+      if (editingSlide) formData.append('id', editingSlide.id);
+      formData.append('title', slideTitle.trim());
+      formData.append('subtitle', slideSubtitle.trim());
+      formData.append('linked_remera_title', slideLinkedRemera);
+      formData.append('is_active', String(editingSlide ? editingSlide.is_active : true));
+      if (slideCroppedFile) {
+        formData.append('file', slideCroppedFile);
+      }
+
+      const res = await fetch('/api/admin/slider', {
+        method: editingSlide ? 'PUT' : 'POST',
+        body: formData,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Error al guardar la foto del carrusel');
+
+      resetSlideForm();
+      await loadData();
+      setSlideFeedback(editingSlide ? 'Foto del carrusel actualizada.' : 'Nueva foto agregada al carrusel.');
+      setTimeout(() => setSlideFeedback(null), 4000);
+    } catch (err: any) {
+      alert(err.message || 'Error al guardar slide');
+    } finally {
+      setSavingSlide(false);
+    }
+  };
+
+  const handleToggleSlide = async (slide: SliderImage) => {
+    try {
+      await fetch('/api/admin/slider', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: slide.id, is_active: !slide.is_active }),
+      });
+      await loadData();
+    } catch (err) {
+      console.error('Error cambiando estado del slide:', err);
+    }
+  };
+
+  const handleMoveSlide = async (index: number, direction: -1 | 1) => {
+    const targetIndex = index + direction;
+    if (targetIndex < 0 || targetIndex >= slides.length) return;
+    const next = [...slides];
+    const [moved] = next.splice(index, 1);
+    next.splice(targetIndex, 0, moved);
+    setSlides(next);
+
+    try {
+      await fetch('/api/admin/slider', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderedIds: next.map((s) => s.id) }),
+      });
+    } catch (err) {
+      console.error('Error reordenando carrusel:', err);
+      await loadData();
+    }
+  };
+
+  const handleDeleteSlide = async (slide: SliderImage) => {
+    if (!confirm(`¿Eliminar esta foto del carrusel${slide.title ? ` ("${slide.title}")` : ''}?`)) return;
+    try {
+      await fetch(`/api/admin/slider?id=${encodeURIComponent(slide.id)}`, { method: 'DELETE' });
+      await loadData();
+    } catch (err) {
+      console.error('Error eliminando slide:', err);
+    }
+  };
+
+  const handleResetDefaultSlides = async () => {
+    if (!confirm('¿Restaurar las 6 fotos iniciales del carrusel?')) return;
+    try {
+      setSavingSlide(true);
+      const res = await fetch('/api/admin/slider', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'reset' }),
+      });
+      const data = await res.json();
+      if (data.slides) setSlides(data.slides);
+      setSlideFeedback(data.message || 'Se restauraron las 6 fotos iniciales.');
+      setTimeout(() => setSlideFeedback(null), 4000);
+    } catch (err) {
+      console.error('Error restaurando carrusel:', err);
+    } finally {
+      setSavingSlide(false);
     }
   };
 
@@ -587,6 +739,18 @@ export default function AdminPage() {
           >
             <Package className="w-3.5 h-3.5" />
             <span>Remeras ({remeras.length})</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('carrusel')}
+            className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 whitespace-nowrap ${
+              activeTab === 'carrusel'
+                ? 'bg-zinc-900 text-white'
+                : 'bg-white text-zinc-600 hover:bg-zinc-100'
+            }`}
+          >
+            <Images className="w-3.5 h-3.5" />
+            <span>Carrusel ({slides.length})</span>
           </button>
 
           <button
@@ -1388,6 +1552,280 @@ export default function AdminPage() {
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* TAB 2B: CARRUSEL PRINCIPAL (1.91:1 ADMINISTRABLE CON RECORTE) */}
+        {activeTab === 'carrusel' && (
+          <div className="space-y-6">
+            {/* Formulario Subir / Recortar / Editar Foto */}
+            <div className="bg-white rounded-xl p-5 border border-zinc-200 space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-zinc-200">
+                <div>
+                  <h3 className="text-base font-bold text-zinc-900">
+                    {editingSlide ? 'Editar Foto del Carrusel' : 'Agregar Foto al Carrusel (1.91:1)'}
+                  </h3>
+                  <p className="text-xs text-zinc-500">
+                    Subí una foto de mujeres u hombres usando las remeras y recortala con encuadre panorámico 1.91:1.
+                  </p>
+                </div>
+
+                {editingSlide && (
+                  <button
+                    type="button"
+                    onClick={resetSlideForm}
+                    className="text-xs text-zinc-500 hover:text-zinc-900 underline"
+                  >
+                    Cancelar Edición
+                  </button>
+                )}
+              </div>
+
+              <form onSubmit={handleSaveSlide} className="space-y-4">
+                {/* Selector de archivo */}
+                <div className="flex flex-wrap items-center gap-3">
+                  <label className="cursor-pointer py-2 px-4 rounded-lg border border-zinc-300 bg-zinc-50 hover:bg-zinc-100 text-zinc-800 text-xs font-semibold inline-flex items-center gap-2 transition-colors">
+                    <Upload className="w-3.5 h-3.5 text-[#FF00FF]" />
+                    <span>{slidePreviewUrl || editingSlide ? 'Elegir otra foto' : 'Seleccionar foto (JPG / PNG)'}</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleSlideFileSelect}
+                      className="hidden"
+                    />
+                  </label>
+
+                  {editingSlide && !slideCropSource && (
+                    <button
+                      type="button"
+                      onClick={() => setSlideCropSource(editingSlide.image_url)}
+                      className="py-2 px-3.5 rounded-lg border border-zinc-300 bg-white hover:bg-zinc-50 text-zinc-700 text-xs font-semibold inline-flex items-center gap-1.5"
+                    >
+                      <Crop className="w-3.5 h-3.5 text-[#199DD0]" />
+                      <span>Recortar / Reencuadrar foto actual</span>
+                    </button>
+                  )}
+                </div>
+
+                {/* Editor visual de recorte 1.91:1 */}
+                {slideCropSource && (
+                  <ImageCropper191
+                    imageSrc={slideCropSource}
+                    onCropComplete={(file, previewUrl) => {
+                      setSlideCroppedFile(file);
+                      setSlidePreviewUrl(previewUrl);
+                      setSlideCropSource(null);
+                    }}
+                    onCancel={() => setSlideCropSource(null)}
+                  />
+                )}
+
+                {/* Vista previa del recorte listo */}
+                {!slideCropSource && (slidePreviewUrl || editingSlide?.image_url) && (
+                  <div className="space-y-1.5">
+                    <span className="text-[11px] font-semibold text-zinc-600 block">
+                      Vista previa en proporción 1.91:1:
+                    </span>
+                    <div
+                      style={{ aspectRatio: '1.91 / 1' }}
+                      className="max-w-lg rounded-xl overflow-hidden border border-zinc-300 bg-zinc-950"
+                    >
+                      <img
+                        src={slidePreviewUrl || editingSlide?.image_url}
+                        alt="Vista previa carrusel"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Textos opcionales y vínculo a remera */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-zinc-700 mb-1">
+                      Título sobre la foto (Opcional):
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ej: Colección Mujeres del Tango"
+                      value={slideTitle}
+                      onChange={(e) => setSlideTitle(e.target.value)}
+                      className="w-full p-2 rounded-lg border border-zinc-300 text-xs text-zinc-900"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-zinc-700 mb-1">
+                      Subtítulo / Frase (Opcional):
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ej: Calce cómodo y algodón peinado"
+                      value={slideSubtitle}
+                      onChange={(e) => setSlideSubtitle(e.target.value)}
+                      className="w-full p-2 rounded-lg border border-zinc-300 text-xs text-zinc-900"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-zinc-700 mb-1">
+                      Vincular a una Remera (Opcional):
+                    </label>
+                    <select
+                      value={slideLinkedRemera}
+                      onChange={(e) => setSlideLinkedRemera(e.target.value)}
+                      className="w-full p-2 rounded-lg border border-zinc-300 text-xs text-zinc-900 bg-white"
+                    >
+                      <option value="">Sin enlace directo</option>
+                      {remeras.map((r) => (
+                        <option key={r.id} value={r.title}>
+                          {r.title}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="flex justify-end">
+                  <button
+                    type="submit"
+                    disabled={savingSlide || Boolean(slideCropSource)}
+                    className="py-2 px-5 rounded-lg bg-zinc-900 hover:bg-zinc-800 disabled:bg-zinc-400 text-white font-medium text-xs flex items-center gap-1.5"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>{savingSlide ? 'Guardando...' : editingSlide ? 'Actualizar Foto' : 'Agregar al Carrusel'}</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            {/* Cabecera listado de slides */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-xl border border-zinc-200">
+              <div>
+                <h4 className="text-sm font-bold text-zinc-900">
+                  Fotos del Carrusel ({slides.length})
+                </h4>
+                <p className="text-xs text-zinc-500">
+                  Ordená con las flechas, pausá o editá cada diapositiva. Se muestran en proporción 1.91:1 arriba del catálogo.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleResetDefaultSlides}
+                disabled={savingSlide}
+                className="py-2 px-3.5 rounded-lg border border-zinc-300 bg-zinc-50 hover:bg-zinc-100 text-zinc-800 text-xs font-semibold inline-flex items-center gap-1.5 self-start sm:self-auto"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 text-[#FF00FF] ${savingSlide ? 'animate-spin' : ''}`} />
+                <span>Restaurar las 6 fotos iniciales</span>
+              </button>
+            </div>
+
+            {slideFeedback && (
+              <div className="p-3.5 rounded-xl bg-green-50 border border-green-200 text-green-900 text-xs flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
+                <span>{slideFeedback}</span>
+              </div>
+            )}
+
+            {/* Grilla de fotos actuales */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {slides.map((slide, idx) => (
+                <div
+                  key={slide.id}
+                  className={`bg-white rounded-xl overflow-hidden border ${
+                    slide.is_active ? 'border-zinc-200' : 'border-zinc-300 opacity-60'
+                  }`}
+                >
+                  <div style={{ aspectRatio: '1.91 / 1' }} className="relative bg-zinc-950">
+                    <img
+                      src={slide.image_url}
+                      alt={slide.title || `Foto ${idx + 1}`}
+                      loading="lazy"
+                      decoding="async"
+                      className="w-full h-full object-cover"
+                    />
+                    <span className="absolute top-2 left-2 px-2 py-0.5 rounded bg-zinc-900/85 text-white text-[10px] font-mono font-bold">
+                      #{idx + 1}
+                    </span>
+                  </div>
+
+                  <div className="p-3.5 space-y-2">
+                    <div>
+                      <h5 className="font-bold text-zinc-900 text-xs truncate">
+                        {slide.title || '(Sin título)'}
+                      </h5>
+                      <p className="text-[11px] text-zinc-500 truncate">
+                        {slide.subtitle || 'Sin subtítulo'}
+                      </p>
+                      {slide.linked_remera_title && (
+                        <p className="text-[10px] text-[#199DD0] font-medium truncate mt-0.5">
+                          Enlace: {slide.linked_remera_title}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="pt-2 border-t border-zinc-100 flex items-center justify-between gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleToggleSlide(slide)}
+                        className={`text-xs font-medium flex items-center gap-1 ${
+                          slide.is_active ? 'text-zinc-800' : 'text-zinc-400'
+                        }`}
+                      >
+                        {slide.is_active ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                        <span>{slide.is_active ? 'Visible' : 'Oculta'}</span>
+                      </button>
+
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => handleMoveSlide(idx, -1)}
+                          disabled={idx === 0}
+                          className="p-1 rounded text-zinc-500 hover:text-zinc-900 disabled:opacity-30"
+                          title="Mover antes"
+                        >
+                          <ArrowLeft className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleMoveSlide(idx, 1)}
+                          disabled={idx === slides.length - 1}
+                          className="p-1 rounded text-zinc-500 hover:text-zinc-900 disabled:opacity-30"
+                          title="Mover después"
+                        >
+                          <ArrowRight className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingSlide(slide);
+                            setSlideTitle(slide.title || '');
+                            setSlideSubtitle(slide.subtitle || '');
+                            setSlideLinkedRemera(slide.linked_remera_title || '');
+                            setSlideCroppedFile(null);
+                            setSlidePreviewUrl('');
+                            setSlideCropSource(null);
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                          }}
+                          className="p-1 rounded text-zinc-500 hover:text-zinc-900"
+                          title="Editar o recortar"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteSlide(slide)}
+                          className="p-1 rounded text-zinc-400 hover:text-red-600"
+                          title="Eliminar"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
               ))}
