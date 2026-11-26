@@ -59,7 +59,7 @@ export default function HeroSlider({ slides, onSelectLinkedRemera }: HeroSliderP
         onMouseLeave={() => setIsPaused(false)}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
-        className="relative group rounded-2xl overflow-hidden border border-zinc-800/90 bg-zinc-950 shadow-[0_12px_40px_rgba(0,0,0,0.6)]"
+        className="relative group rounded-[28px] sm:rounded-[36px] overflow-hidden border border-zinc-800/90 bg-zinc-950 shadow-[0_12px_40px_rgba(0,0,0,0.6)]"
       >
         {/* Contenedor panorámico 1.91:1 */}
         <div
@@ -89,7 +89,7 @@ export default function HeroSlider({ slides, onSelectLinkedRemera }: HeroSliderP
           })}
 
           {/* Etiqueta superior discreta */}
-          <div className="absolute top-3 left-3 sm:top-4 sm:left-4 z-20">
+          <div className="absolute top-4 left-4 sm:top-5 sm:left-6 z-20">
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-zinc-950/75 backdrop-blur-md border border-white/15 text-[10px] sm:text-xs font-semibold text-zinc-200 shadow-sm">
               <Sparkles className="w-3 h-3 text-[#FF00FF]" />
               <span>Así quedan puestas</span>
@@ -98,14 +98,14 @@ export default function HeroSlider({ slides, onSelectLinkedRemera }: HeroSliderP
 
           {/* Contador de fotos */}
           {total > 1 && (
-            <div className="absolute top-3 right-3 sm:top-4 sm:right-4 z-20 px-2.5 py-1 rounded-full bg-zinc-950/70 backdrop-blur-md border border-white/10 text-[10px] font-mono text-zinc-300">
+            <div className="absolute top-4 right-4 sm:top-5 sm:right-6 z-20 px-2.5 py-1 rounded-full bg-zinc-950/70 backdrop-blur-md border border-white/10 text-[10px] font-mono text-zinc-300">
               {currentIndex + 1} / {total}
             </div>
           )}
 
           {/* Texto y botón de acción sobre el degradado inferior */}
           {(currentSlide.title || currentSlide.subtitle || currentSlide.linked_remera_title) && (
-            <div className="absolute inset-x-0 bottom-0 z-20 p-4 sm:p-6 flex flex-col sm:flex-row sm:items-end justify-between gap-3">
+            <div className="absolute inset-x-0 bottom-0 z-20 p-5 sm:p-7 flex flex-col sm:flex-row sm:items-end justify-between gap-3">
               <div className="max-w-xl">
                 {currentSlide.title && (
                   <h2 className="text-base sm:text-2xl font-bold text-white tracking-tight drop-shadow">
