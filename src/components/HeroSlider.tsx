@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import { SliderImage } from '@/types/database';
-import { ChevronLeft, ChevronRight, Sparkles, ZoomIn } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ZoomIn } from 'lucide-react';
 
 interface HeroSliderProps {
   slides: SliderImage[];
@@ -87,14 +87,6 @@ export default function HeroSlider({ slides, onSelectLinkedRemera }: HeroSliderP
               </div>
             );
           })}
-
-          {/* Etiqueta superior discreta */}
-          <div className="absolute top-4 left-4 sm:top-5 sm:left-6 z-20">
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-zinc-950/75 backdrop-blur-md border border-white/15 text-[10px] sm:text-xs font-semibold text-zinc-200 shadow-sm">
-              <Sparkles className="w-3 h-3 text-[#FF00FF]" />
-              <span>Así quedan puestas</span>
-            </span>
-          </div>
 
           {/* Contador de fotos */}
           {total > 1 && (

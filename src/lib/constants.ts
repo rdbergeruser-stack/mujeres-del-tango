@@ -230,7 +230,7 @@ export const DEFAULT_SLIDER_IMAGES: SliderImage[] = [
   },
   {
     id: 'slide-4',
-    title: 'Así quedan puestas',
+    title: 'Estampas con identidad',
     subtitle: 'Algodón peinado premium y calce cómodo para todos los cuerpos',
     image_url: '/slider/slide-4.jpg',
     linked_remera_title: null,
